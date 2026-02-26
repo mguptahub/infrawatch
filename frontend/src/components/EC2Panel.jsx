@@ -414,7 +414,7 @@ function MetricsModal({ instance, onClose }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <div className="metrics-range-tabs">
-            {[24, 48, 72].map((h) => (
+            {[1, 6, 24, 72].map((h) => (
               <button
                 key={h}
                 className={`metrics-range-tab ${hours === h ? "active" : ""}`}

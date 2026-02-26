@@ -72,6 +72,8 @@ export const api = {
   getMQDetail:    (id) => req(`/api/mq/brokers/${id}`),
   getMQMetrics:   (id, hours = 24) => req(`/api/mq/brokers/${id}/metrics?hours=${hours}`),
   getElastiCache: (force = false) => req(withForce("/api/elasticache/clusters", force)),
+  getECDetail:    (id, is_rg = true) => req(`/api/elasticache/detail?id=${id}&is_rg=${is_rg}`),
+  getECMetrics:   (id, engine = "redis", hours = 24, is_rg = true) => req(`/api/elasticache/metrics?id=${id}&engine=${engine}&hours=${hours}&is_rg=${is_rg}`),
   getSecrets:      (force = false) => req(withForce("/api/secrets", force)),
   getSecretValue:  (arn) => req(`/api/secrets/value?arn=${encodeURIComponent(arn)}`),
   getSES:         (force = false) => req(withForce("/api/ses/overview", force)),
