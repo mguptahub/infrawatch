@@ -1,7 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, X, ChevronDown, ChevronRight } from "lucide-react";
+import { RefreshCw, X, ChevronDown, ChevronRight, BarChart2 } from "lucide-react";
+import {
+  ResponsiveContainer, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+} from "recharts";
 import { api } from "../api/client";
 import { useData } from "../hooks/useData";
+
+function formatBytes(bytes) {
+  if (bytes == null) return "N/A";
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
+  return `${(bytes / k ** i).toFixed(1)} ${units[i]}`;
+}
 
 const STATE_COLORS = {
   active:           "state-green",
@@ -55,6 +68,7 @@ function DetailDrawer({ lb, onClose }) {
   const [loadingDetail, setLoadingDetail] = useState(true);
   const [detailError, setDetailError] = useState(null);
   const [openSections, setOpenSections] = useState({ overview: true, listeners: true, targets: true, tags: false });
+  const [showMetrics, setShowMetrics] = useState(false);
 
   const toggle = (s) => setOpenSections((prev) => ({ ...prev, [s]: !prev[s] }));
 
@@ -90,7 +104,17 @@ function DetailDrawer({ lb, onClose }) {
             <span className={`state-pill ${STATE_COLORS[lb.state] || "state-gray"}`}>{lb.state}</span>
           </div>
         </div>
-        <button className="drawer-close" onClick={onClose}><X size={16} /></button>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <button
+            className="refresh-btn"
+            onClick={() => setShowMetrics(true)}
+            title="View Metrics"
+            style={{ padding: "0.3rem 0.6rem", display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "0.75rem" }}
+          >
+            <BarChart2 size={13} /> Metrics
+          </button>
+          <button className="drawer-close" onClick={onClose}><X size={16} /></button>
+        </div>
       </div>
 
       <div className="drawer-body">
@@ -254,9 +278,170 @@ function DetailDrawer({ lb, onClose }) {
           </>
         )}
       </div>
+
+      {showMetrics && (
+        <MetricsModal lb={lb} onClose={() => setShowMetrics(false)} />
+      )}
     </div>
   );
 }
+
+
+// ── Metrics Modal ─────────────────────────────────────────────────────────────
+function MetricsModal({ lb, onClose }) {
+  const [hours, setHours] = useState(24);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const id = lb.arn || lb.name;
+    setData(null);
+    setLoading(true);
+    setError(null);
+    api.getLBMetrics(id, hours)
+      .then((d) => { setData(d); setLoading(false); })
+      .catch((e) => { setError(e.message); setLoading(false); });
+  }, [lb.arn, lb.name, hours]);
+
+  const pts = (series) => {
+    if (!series) return [];
+    return Object.entries(series)
+      .map(([ts, v]) => ({ ts: new Date(ts).getTime(), v }))
+      .sort((a, b) => a.ts - b.ts);
+  };
+
+  return (
+    <div className="metrics-modal">
+      <div className="metrics-header">
+        <div>
+          <div style={{ fontWeight: 700, fontSize: "1rem" }}>{lb.name}</div>
+          <div className="cell-mono" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>
+            {lb.arn || "Classic"}
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div className="metrics-range-tabs">
+            {[24, 48, 72].map((h) => (
+              <button
+                key={h}
+                className={`metrics-range-tab ${hours === h ? "active" : ""}`}
+                onClick={() => setHours(h)}
+              >
+                {h}h
+              </button>
+            ))}
+          </div>
+          <button className="drawer-close" onClick={onClose}><X size={14} /></button>
+        </div>
+      </div>
+
+      <div className="metrics-body">
+        {loading && <div className="panel-loading">Loading metrics…</div>}
+        {error   && <div className="panel-error">{error}</div>}
+        {data && (
+          <div className="metrics-charts-grid">
+            <MetricChart
+              title="Traffic (Processed Bytes)"
+              hours={hours}
+              data={pts(data.processed_bytes)}
+              yFmt={formatBytes}
+              color="var(--blue)"
+              label="Bytes"
+            />
+            {data.request_count && (
+              <MetricChart
+                title="Requests (sum / period)"
+                hours={hours}
+                data={pts(data.request_count)}
+                color="var(--green)"
+                label="Count"
+              />
+            )}
+            {data.active_flow_count && (
+              <MetricChart
+                title="Active Flows (avg / period)"
+                hours={hours}
+                data={pts(data.active_flow_count)}
+                color="var(--amber)"
+                label="Flows"
+              />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MetricChart({ title, hours, data, color, label, yFmt }) {
+  const isEmpty = !data || data.length === 0;
+
+  const xFmtFn = (ts) => {
+    const d = new Date(ts);
+    if (hours <= 24) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return `${d.getMonth() + 1}/${d.getDate()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  };
+
+  const tickInterval = isEmpty ? 0 : Math.max(0, Math.floor(data.length / 6) - 1);
+
+  return (
+    <div className="metrics-chart-card">
+      <div className="metrics-chart-title">
+        {title}
+        <span className="metrics-legend-item" style={{ float: "right" }}>
+          <span className="metrics-legend-dot" style={{ background: color }} />
+          {label}
+        </span>
+      </div>
+
+      {isEmpty ? (
+        <div className="metrics-chart-empty">No data available</div>
+      ) : (
+        <ResponsiveContainer width="100%" height={180}>
+          <LineChart data={data} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1f2840" vertical={false} />
+            <XAxis
+              dataKey="ts"
+              tick={{ fill: "#5a6a85", fontSize: 10 }}
+              tickFormatter={xFmtFn}
+              interval={tickInterval}
+            />
+            <YAxis
+              tick={{ fill: "#5a6a85", fontSize: 10 }}
+              tickFormatter={yFmt || ((v) => v)}
+              width={56}
+            />
+            <Tooltip content={<ChartTooltip xFmt={xFmtFn} tipFmt={yFmt} seriesName={label} />} />
+            <Line
+              type="monotone"
+              dataKey="v"
+              stroke={color}
+              dot={false}
+              strokeWidth={1.5}
+              connectNulls
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
+function ChartTooltip({ active, payload, label, xFmt, tipFmt, seriesName }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="chart-tooltip">
+      <div className="tooltip-label">{xFmt(label)}</div>
+      {payload.map((p, i) => (
+        <div key={i} style={{ color: p.stroke, fontFamily: "var(--font-mono)", fontSize: "0.82rem" }}>
+          {seriesName}: {tipFmt ? tipFmt(p.value) : p.value}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 // ── Main Panel ────────────────────────────────────────────────────────────────
 export default function LBPanel() {

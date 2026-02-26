@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from ..core.aws import get_session_and_config
 from ..core.valkey_client import get_cached, make_cache_key, CACHE_TTL
 
@@ -297,6 +297,82 @@ def get_load_balancers(request: Request, force: bool = False):
     key = make_cache_key("lb", config.access_key or "", config.region)
     try:
         return get_cached(key, CACHE_TTL, lambda: _fetch_lbs(session), force)
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _fetch_lb_metrics(session, lb_id, hours):
+    cw = session.client("cloudwatch")
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(hours=hours)
+    period_map = {24: 300, 48: 600, 72: 900}
+    period = period_map.get(hours, 300)
+
+    # Determine type and dimensions
+    namespace = "AWS/ApplicationELB"
+    dimensions = []
+
+    if lb_id.startswith("arn:"):
+        # v2 (ALB, NLB)
+        # arn:aws:elasticloadbalancing:region:account:loadbalancer/app/name/id
+        suffix = lb_id.split("/")[-3:] # [app/net, name, id]
+        namespace = "AWS/ApplicationELB" if suffix[0] == "app" else "AWS/NetworkELB"
+        lb_val = "/".join(suffix)
+        dimensions = [{"Name": "LoadBalancer", "Value": lb_val}]
+    else:
+        # Classic
+        namespace = "AWS/ELB"
+        dimensions = [{"Name": "LoadBalancerName", "Value": lb_id}]
+
+    def _series(metric, stat="Average"):
+        try:
+            resp = cw.get_metric_statistics(
+                Namespace=namespace,
+                MetricName=metric,
+                Dimensions=dimensions,
+                StartTime=start,
+                EndTime=end,
+                Period=period,
+                Statistics=[stat],
+            )
+            pts = sorted(resp.get("Datapoints", []), key=lambda x: x["Timestamp"])
+            return {p["Timestamp"].isoformat(): p[stat] for p in pts}
+        except Exception:
+            return {}
+
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        if namespace == "AWS/ApplicationELB":
+            bytes_f = ex.submit(_series, "ProcessedBytes", "Sum")
+            req_f   = ex.submit(_series, "RequestCount", "Sum")
+            return {
+                "processed_bytes": bytes_f.result(),
+                "request_count":   req_f.result(),
+            }
+        elif namespace == "AWS/NetworkELB":
+            bytes_f = ex.submit(_series, "ProcessedBytes", "Sum")
+            flow_f  = ex.submit(_series, "ActiveFlowCount", "Average")
+            return {
+                "processed_bytes": bytes_f.result(),
+                "active_flow_count": flow_f.result(),
+            }
+        else: # Classic
+            # Try ProcessedBytes first, then fallback to EstimatedProcessedBytes
+            bytes_pts = _series("ProcessedBytes", "Sum")
+            if not bytes_pts:
+                bytes_pts = _series("EstimatedProcessedBytes", "Sum")
+            
+            req_f = ex.submit(_series, "RequestCount", "Sum")
+            return {
+                "processed_bytes": bytes_pts,
+                "request_count":   req_f.result(),
+            }
+
+
+@router.get("/{lb_id:path}/metrics")
+def get_lb_metrics(lb_id: str, request: Request, hours: int = 24):
+    session, _ = get_session_and_config(request)
+    try:
+        return _fetch_lb_metrics(session, lb_id, hours)
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
 

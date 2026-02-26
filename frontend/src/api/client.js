@@ -76,6 +76,7 @@ export const api = {
   getSESIdentities: (force = false) => req(withForce("/api/ses/identities", force)),
   getLBs:         (force = false) => req(withForce("/api/lb", force)),
   getLBDetail:    (id) => req(`/api/lb/${encodeURIComponent(id)}`),
+  getLBMetrics:   (id, hours = 24) => req(`/api/lb/${encodeURIComponent(id)}/metrics?hours=${hours}`),
 
   logout:  () => req("/api/auth/logout", { method: "POST" }),
   health:  () => req("/api/health"),
