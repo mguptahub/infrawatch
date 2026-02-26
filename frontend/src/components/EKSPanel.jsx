@@ -292,7 +292,7 @@ function DetailDrawer({ cluster, onClose }) {
               {detail.nodegroups?.some(ng => ng.health_issues?.length > 0) && (
                 <div style={{ marginTop: "0.75rem" }}>
                   <span className="stat-lbl" style={{ display: "block", marginBottom: "0.4rem", color: "var(--red)" }}>Health Issues</span>
-                  {detail.nodegroups.filter(ng => ng.health_issues?.length > 0).map(ng => (
+                  {(detail.nodegroups ?? []).filter(ng => ng.health_issues?.length > 0).map(ng => (
                     <div key={ng.name} style={{ marginBottom: "0.4rem" }}>
                       <span style={{ fontSize: "0.75rem", fontWeight: 600 }}>{ng.name}:</span>
                       {ng.health_issues.map((issue, i) => (
