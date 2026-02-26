@@ -142,8 +142,6 @@ def _fetch_eks_detail(session, name):
             "disk_size": ng.get("diskSize"),
             "release_version": ng.get("releaseVersion", ""),
             "health_issues": health_issues,
-            "labels": ng.get("labels", {}),
-            "taints": ng.get("taints", []),
         }
 
     with ThreadPoolExecutor(max_workers=5) as ex:
