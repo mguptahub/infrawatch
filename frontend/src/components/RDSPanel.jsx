@@ -56,8 +56,8 @@ export default function RDSPanel() {
   const [clSort, setClSort] = useState({ col: "id", dir: "asc" });
   const [instSort, setInstSort] = useState({ col: "id", dir: "asc" });
 
-  if (loading) return <div className="panel-loading">Loading RDS…</div>;
-  if (error)   return <div className="panel-error">RDS: {error}</div>;
+  if (loading) return <div className="panel-loading">Loading Databases…</div>;
+  if (error)   return <div className="panel-error">Database: {error}</div>;
 
   const clusters  = data?.clusters  || [];
   const instances = data?.instances || [];
@@ -199,7 +199,7 @@ export default function RDSPanel() {
       )}
 
       {clusters.length === 0 && instances.length === 0 && (
-        <div className="panel-empty">No RDS databases found</div>
+        <div className="panel-empty">No databases found</div>
       )}
 
       {selected && (
@@ -488,7 +488,7 @@ function MetricsModal({ item, onClose }) {
         <div>
           <div style={{ fontWeight: 700, fontSize: "1rem" }}>{item.id}</div>
           <div className="cell-mono" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>
-            {item.type === "cluster" ? "Aurora cluster (writer node)" : "RDS instance"} · {hours}h range
+            {item.type === "cluster" ? "Aurora cluster (writer node)" : "Database instance"} · {hours}h range
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
