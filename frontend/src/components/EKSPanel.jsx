@@ -141,6 +141,12 @@ function DetailDrawer({ cluster, onClose }) {
       .finally(() => setLoading(false));
   }, [cluster.name]);
 
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   const toggle = (s) => setOpenSections(p => ({ ...p, [s]: !p[s] }));
 
   function Section({ id, title, icon: Icon, children }) {
