@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from ..core.aws import get_session_and_config
 from ..core.valkey_client import get_cached, make_cache_key, CACHE_TTL
 
@@ -200,8 +201,6 @@ def _fetch_eks_nodes(session, cluster_name):
     if not instances:
         return {"nodes": [], "count": 0}
 
-    from datetime import datetime, timedelta, timezone
-
     def _uptime_hours(launch_time):
         if not launch_time:
             return None
@@ -221,12 +220,13 @@ def _fetch_eks_nodes(session, cluster_name):
         # CPU from EC2 namespace
         cpu = None
         try:
+            now = datetime.now(timezone.utc)
             pts = cw.get_metric_statistics(
                 Namespace="AWS/EC2",
                 MetricName="CPUUtilization",
                 Dimensions=[{"Name": "InstanceId", "Value": instance_id}],
-                StartTime=datetime.utcnow() - timedelta(minutes=10),
-                EndTime=datetime.utcnow(),
+                StartTime=now - timedelta(minutes=10),
+                EndTime=now,
                 Period=300,
                 Statistics=["Average"],
             )["Datapoints"]
@@ -237,23 +237,25 @@ def _fetch_eks_nodes(session, cluster_name):
 
         # Pod count from Container Insights (requires Container Insights to be enabled)
         pod_count = None
-        try:
-            pts = cw.get_metric_statistics(
-                Namespace="ContainerInsights",
-                MetricName="node_number_of_running_pods",
-                Dimensions=[
-                    {"Name": "ClusterName", "Value": cluster_name},
-                    {"Name": "NodeName",    "Value": private_dns},
-                ],
-                StartTime=datetime.utcnow() - timedelta(minutes=10),
-                EndTime=datetime.utcnow(),
-                Period=300,
-                Statistics=["Average"],
-            )["Datapoints"]
-            if pts:
-                pod_count = int(sorted(pts, key=lambda x: x["Timestamp"])[-1]["Average"])
-        except Exception:
-            pass
+        if private_dns:
+            try:
+                now = datetime.now(timezone.utc)
+                pts = cw.get_metric_statistics(
+                    Namespace="ContainerInsights",
+                    MetricName="node_number_of_running_pods",
+                    Dimensions=[
+                        {"Name": "ClusterName", "Value": cluster_name},
+                        {"Name": "NodeName",    "Value": private_dns},
+                    ],
+                    StartTime=now - timedelta(minutes=10),
+                    EndTime=now,
+                    Period=300,
+                    Statistics=["Average"],
+                )["Datapoints"]
+                if pts:
+                    pod_count = int(sorted(pts, key=lambda x: x["Timestamp"])[-1]["Average"])
+            except Exception:
+                pass
 
         launch_time = i.get("LaunchTime")
         return {
