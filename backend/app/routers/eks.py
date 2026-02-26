@@ -26,19 +26,33 @@ def _fetch_eks(session):
                 "instance_types": ng.get("instanceTypes", []),
                 "scaling_config": ng.get("scalingConfig", {}),
                 "capacity_type": ng.get("capacityType", ""),
+                "ami_type": ng.get("amiType", ""),
+                "disk_size": ng.get("diskSize"),
+                "release_version": ng.get("releaseVersion", ""),
             }
 
         with ThreadPoolExecutor(max_workers=5) as ng_executor:
             nodegroups = list(ng_executor.map(fetch_nodegroup, ng_list))
+
+        vpc_cfg = c.get("resourcesVpcConfig", {})
+        total_nodes = sum(
+            ng.get("scaling_config", {}).get("desiredSize", 0)
+            for ng in nodegroups
+        )
 
         return {
             "name": c["name"],
             "arn": c["arn"],
             "status": c["status"],
             "version": c["version"],
+            "platform_version": c.get("platformVersion"),
             "endpoint": c.get("endpoint"),
             "role_arn": c.get("roleArn"),
             "created_at": c["createdAt"].isoformat() if c.get("createdAt") else None,
+            "public_access": vpc_cfg.get("endpointPublicAccess", False),
+            "private_access": vpc_cfg.get("endpointPrivateAccess", False),
+            "nodegroup_count": len(nodegroups),
+            "node_count": total_nodes,
             "nodegroups": nodegroups,
         }
 
