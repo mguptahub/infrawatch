@@ -1,0 +1,65 @@
+name: aws-monitor
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aws-monitor-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-awsdashboard}
+      POSTGRES_USER: ${POSTGRES_USER:-awsdashboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - monitor-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-awsdashboard}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: aws-monitor-valkey
+    restart: unless-stopped
+    networks:
+      - monitor-net
+
+  backend:
+    build:
+      context: ./backend
+    container_name: aws-monitor-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    env_file:
+      - .env
+    environment:
+      - VALKEY_URL=redis://valkey:6379
+      - POSTGRES_HOST=postgres
+    depends_on:
+      valkey:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    networks:
+      - monitor-net
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: aws-monitor-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - monitor-net
+
+networks:
+  monitor-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

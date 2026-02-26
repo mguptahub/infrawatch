@@ -1,0 +1,200 @@
+import { useState } from "react";
+import { useAuth } from "../hooks/useAuth";
+import EC2Panel from "../components/EC2Panel";
+import EKSPanel from "../components/EKSPanel";
+import RDSPanel from "../components/RDSPanel";
+import CostPanel from "../components/CostPanel";
+import AlarmsPanel from "../components/AlarmsPanel";
+import OpenSearchPanel from "../components/OpenSearchPanel";
+import MQPanel from "../components/MQPanel";
+import ElastiCachePanel from "../components/ElastiCachePanel";
+import SecretsPanel from "../components/SecretsPanel";
+import SESPanel from "../components/SESPanel";
+import LBPanel from "../components/LBPanel";
+
+const ALL_TABS = [
+  { id: "ec2",         label: "EC2" },
+  { id: "elb",         label: "Load Balancers" },
+  { id: "eks",         label: "EKS" },
+  { id: "rds",         label: "RDS" },
+  { id: "elasticache", label: "ElastiCache" },
+  { id: "opensearch",  label: "OpenSearch" },
+  { id: "mq",          label: "MQ" },
+  { id: "ses",         label: "SES" },
+  { id: "secrets",     label: "Secrets" },
+  { id: "cost",        label: "Cost" },
+  { id: "alarms",      label: "Alarms" },
+];
+
+const AWS_REGIONS = [
+  { value: "us-east-1",      label: "US East (N. Virginia)" },
+  { value: "us-east-2",      label: "US East (Ohio)" },
+  { value: "us-west-1",      label: "US West (N. California)" },
+  { value: "us-west-2",      label: "US West (Oregon)" },
+  { value: "ca-central-1",   label: "Canada (Central)" },
+  { value: "eu-west-1",      label: "EU (Ireland)" },
+  { value: "eu-west-2",      label: "EU (London)" },
+  { value: "eu-west-3",      label: "EU (Paris)" },
+  { value: "eu-central-1",   label: "EU (Frankfurt)" },
+  { value: "eu-north-1",     label: "EU (Stockholm)" },
+  { value: "ap-southeast-1", label: "AP (Singapore)" },
+  { value: "ap-southeast-2", label: "AP (Sydney)" },
+  { value: "ap-northeast-1", label: "AP (Tokyo)" },
+  { value: "ap-northeast-2", label: "AP (Seoul)" },
+  { value: "ap-south-1",     label: "AP (Mumbai)" },
+  { value: "sa-east-1",      label: "SA (São Paulo)" },
+  { value: "me-south-1",     label: "ME (Bahrain)" },
+  { value: "af-south-1",     label: "Africa (Cape Town)" },
+];
+
+export default function DashboardPage() {
+  const { auth, logout, terminate, switchRegion } = useAuth();
+  const [contentKey, setContentKey] = useState(0);
+  const [switchingRegion, setSwitchingRegion] = useState(false);
+  const [confirmTerminate, setConfirmTerminate] = useState(false);
+  const [terminating, setTerminating] = useState(false);
+
+  // Gate tabs to services approved for this session
+  const approvedServices = auth?.services || [];
+  const TABS = approvedServices.length
+    ? ALL_TABS.filter((t) => approvedServices.includes(t.id))
+    : ALL_TABS;
+
+  const [tab, _setTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const initialTab = params.get("tab");
+    return TABS.find((t) => t.id === initialTab) ? initialTab : TABS[0]?.id;
+  });
+
+  function setTab(newTab) {
+    _setTab(newTab);
+    const url = new URL(window.location);
+    url.searchParams.set("tab", newTab);
+    window.history.pushState({}, "", url);
+  }
+
+  async function handleRegionChange(e) {
+    const newRegion = e.target.value;
+    setSwitchingRegion(true);
+    try {
+      await switchRegion(newRegion);
+      setContentKey((k) => k + 1); // remounts all panels → fresh fetch
+    } finally {
+      setSwitchingRegion(false);
+    }
+  }
+
+  async function handleTerminate() {
+    setTerminating(true);
+    try {
+      await terminate();
+    } finally {
+      setTerminating(false);
+      setConfirmTerminate(false);
+    }
+  }
+
+  if (!TABS.length) {
+    return (
+      <div className="dashboard">
+        <header className="dash-header">
+          <div className="dash-brand">
+            <span className="logo-icon">⬡</span>
+            <span className="brand-name">AWS Monitor</span>
+          </div>
+          <div className="dash-account">
+            <button className="logout-btn" onClick={logout}>Disconnect</button>
+          </div>
+        </header>
+        <div className="panel-empty" style={{ margin: "3rem auto" }}>
+          No services approved for this session.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="dashboard">
+      <header className="dash-header">
+        <div className="dash-brand">
+          <span className="logo-icon">⬡</span>
+          <span className="brand-name">AWS Monitor</span>
+        </div>
+
+        <div className="dash-account">
+          <span className="account-arn">{auth?.name || auth?.email}</span>
+
+          {/* Region selector — only for users with AWS credentials */}
+          {auth?.role === "keys" && (
+            <select
+              className="region-select"
+              value={auth?.region || ""}
+              onChange={handleRegionChange}
+              disabled={switchingRegion}
+              title="Switch AWS region"
+            >
+              {AWS_REGIONS.map((r) => (
+                <option key={r.value} value={r.value}>{r.value}</option>
+              ))}
+            </select>
+          )}
+
+          {/* Terminate session (destroys STS creds) */}
+          {auth?.role === "keys" && !confirmTerminate && (
+            <button
+              className="logout-btn terminate-btn"
+              onClick={() => setConfirmTerminate(true)}
+              title="Destroy STS credentials — requires new approval to log back in"
+            >
+              Terminate
+            </button>
+          )}
+          {auth?.role === "keys" && confirmTerminate && (
+            <div className="terminate-confirm">
+              <span>Destroy session?</span>
+              <button
+                className="logout-btn"
+                style={{ borderColor: "var(--red)", color: "var(--red)" }}
+                onClick={handleTerminate}
+                disabled={terminating}
+              >
+                {terminating ? "…" : "Yes"}
+              </button>
+              <button className="logout-btn" onClick={() => setConfirmTerminate(false)}>
+                No
+              </button>
+            </div>
+          )}
+
+          <button className="logout-btn" onClick={logout}>Disconnect</button>
+        </div>
+      </header>
+
+      <nav className="dash-nav">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            className={`nav-tab ${tab === t.id ? "active" : ""}`}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      <main key={contentKey} className="dash-content">
+        {tab === "ec2"         && <EC2Panel />}
+        {tab === "eks"         && <EKSPanel />}
+        {tab === "rds"         && <RDSPanel />}
+        {tab === "elasticache" && <ElastiCachePanel />}
+        {tab === "opensearch"  && <OpenSearchPanel />}
+        {tab === "mq"          && <MQPanel />}
+        {tab === "elb"         && <LBPanel />}
+        {tab === "ses"         && <SESPanel />}
+        {tab === "secrets"     && <SecretsPanel />}
+        {tab === "cost"        && <CostPanel />}
+        {tab === "alarms"      && <AlarmsPanel />}
+      </main>
+    </div>
+  );
+}
