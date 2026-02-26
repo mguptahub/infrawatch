@@ -206,6 +206,19 @@ function DetailDrawer({ cluster, onClose }) {
       .finally(() => setLoading(false));
   }, [cluster.id, cluster.is_rg]);
 
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== "Escape") return;
+      if (showMetrics) {
+        setShowMetrics(false);
+        return;
+      }
+      onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose, showMetrics]);
+
   const toggle = (s) => setOpenSections(prev => ({ ...prev, [s]: !prev[s] }));
 
   function Section({ id, title, icon: Icon, children }) {

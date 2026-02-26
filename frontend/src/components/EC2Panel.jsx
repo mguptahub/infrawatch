@@ -185,6 +185,19 @@ function DetailDrawer({ instance, onClose }) {
       .catch((e) => { setDetailError(e.message); setDetailLoading(false); });
   }, [instance.id]);
 
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== "Escape") return;
+      if (showMetrics) {
+        setShowMetrics(false);
+        return;
+      }
+      onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose, showMetrics]);
+
   return (
     <>
       <div className="drawer-backdrop" onClick={onClose} />

@@ -166,6 +166,19 @@ function DetailDrawer({ domain, onClose }) {
       .finally(() => setLoading(false));
   }, [domain.name]);
 
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== "Escape") return;
+      if (showMetrics) {
+        setShowMetrics(false);
+        return;
+      }
+      onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose, showMetrics]);
+
   const toggle = (s) => setOpenSections(p => ({ ...p, [s]: !p[s] }));
 
   function Section({ id, title, icon: Icon, children }) {

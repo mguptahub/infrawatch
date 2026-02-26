@@ -163,6 +163,19 @@ function DetailDrawer({ broker, onClose }) {
       .finally(() => setLoading(false));
   }, [broker.id]);
 
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== "Escape") return;
+      if (showMetrics) {
+        setShowMetrics(false);
+        return;
+      }
+      onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose, showMetrics]);
+
   function Section({ id, title, icon: Icon, children }) {
     const open = openSections[id];
     return (

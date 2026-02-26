@@ -239,10 +239,15 @@ function DetailDrawer({ cluster, onClose }) {
   }, [cluster.name]);
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    const handler = (e) => {
+      if (e.key !== "Escape") return;
+      // Keep parent drawer open while nested nodes modal is active.
+      if (showNodes) return;
+      onClose();
+    };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, showNodes]);
 
   const toggle = (s) => setOpenSections(p => ({ ...p, [s]: !p[s] }));
 
@@ -577,10 +582,15 @@ function NodesModal({ cluster, onClose }) {
   }, [cluster.name]);
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    const handler = (e) => {
+      if (e.key !== "Escape") return;
+      // Keep nodes modal open while nested node drawer is active.
+      if (selectedNode) return;
+      onClose();
+    };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, selectedNode]);
 
   const nodes = data?.nodes || [];
 
@@ -709,10 +719,18 @@ function NodeDetailDrawer({ node, onClose }) {
   }, [node.id]);
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    const handler = (e) => {
+      if (e.key !== "Escape") return;
+      // Close metrics first, then node drawer on the next Escape.
+      if (showMetrics) {
+        setShowMetrics(false);
+        return;
+      }
+      onClose();
+    };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, showMetrics]);
 
   const STATE_COLORS = { running: "state-green", stopped: "state-red", pending: "state-amber", stopping: "state-amber", terminated: "state-gray", "shutting-down": "state-gray" };
 

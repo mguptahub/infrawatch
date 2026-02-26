@@ -80,6 +80,19 @@ function DetailDrawer({ lb, onClose }) {
       .finally(() => setLoadingDetail(false));
   }, [lb.arn, lb.name]);
 
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== "Escape") return;
+      if (showMetrics) {
+        setShowMetrics(false);
+        return;
+      }
+      onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose, showMetrics]);
+
   function Section({ id, title, children }) {
     const open = openSections[id];
     return (
