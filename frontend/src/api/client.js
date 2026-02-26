@@ -69,6 +69,8 @@ export const api = {
   getAlarms:      (force = false) => req(withForce("/api/alarms", force)),
   getOpenSearch:  (force = false) => req(withForce("/api/opensearch/domains", force)),
   getMQ:          (force = false) => req(withForce("/api/mq/brokers", force)),
+  getMQDetail:    (id) => req(`/api/mq/brokers/${id}`),
+  getMQMetrics:   (id, hours = 24) => req(`/api/mq/brokers/${id}/metrics?hours=${hours}`),
   getElastiCache: (force = false) => req(withForce("/api/elasticache/clusters", force)),
   getSecrets:      (force = false) => req(withForce("/api/secrets", force)),
   getSecretValue:  (arn) => req(`/api/secrets/value?arn=${encodeURIComponent(arn)}`),
