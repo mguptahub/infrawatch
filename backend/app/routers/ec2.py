@@ -250,30 +250,55 @@ def _fetch_ec2_metrics(session, instance_id, hours):
                 Statistics=[stat],
             )
             pts = sorted(resp["Datapoints"], key=lambda x: x["Timestamp"])
-            return [{"ts": p["Timestamp"].isoformat(), "v": round(p[stat], 3)} for p in pts]
+            return {p["Timestamp"].isoformat(): p[stat] for p in pts}
         except Exception:
-            return []
+            return {}
 
-    with ThreadPoolExecutor(max_workers=6) as ex:
-        cpu_f  = ex.submit(_series, "AWS/EC2",  "CPUUtilization")
-        nin_f  = ex.submit(_series, "AWS/EC2",  "NetworkIn",       "Sum")
-        nout_f = ex.submit(_series, "AWS/EC2",  "NetworkOut",      "Sum")
-        dr_f   = ex.submit(_series, "AWS/EC2",  "DiskReadBytes",   "Sum")
-        dw_f   = ex.submit(_series, "AWS/EC2",  "DiskWriteBytes",  "Sum")
-        mem_f  = ex.submit(_series, "CWAgent",  "mem_used_percent")
-        return {
-            "instance_id": instance_id,
-            "hours": hours,
-            "period_seconds": period,
-            "metrics": {
-                "cpu":        cpu_f.result(),
-                "network_in": nin_f.result(),
-                "network_out": nout_f.result(),
-                "disk_read":  dr_f.result(),
-                "disk_write": dw_f.result(),
-                "memory":     mem_f.result(),
-            },
-        }
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        cpu_f  = ex.submit(_series, "AWS/EC2", "CPUUtilization")
+        nin_f  = ex.submit(_series, "AWS/EC2", "NetworkIn", "Sum")
+        nout_f = ex.submit(_series, "AWS/EC2", "NetworkOut", "Sum")
+        dr_f   = ex.submit(_series, "AWS/EC2", "DiskReadBytes", "Sum")
+        dw_f   = ex.submit(_series, "AWS/EC2", "DiskWriteBytes", "Sum")
+        er_f   = ex.submit(_series, "AWS/EC2", "EBSReadBytes", "Sum")
+        ew_f   = ex.submit(_series, "AWS/EC2", "EBSWriteBytes", "Sum")
+        mem_f  = ex.submit(_series, "CWAgent", "mem_used_percent")
+
+        # Get results
+        cpu_pts = cpu_f.result()
+        nin_pts = nin_f.result()
+        nout_pts = nout_f.result()
+        dr_pts = dr_f.result()
+        dw_pts = dw_f.result()
+        er_pts = er_f.result()
+        ew_pts = ew_f.result()
+        mem_pts = mem_f.result()
+
+    def _to_list(pts):
+        return [{"ts": ts, "v": round(v, 3)} for ts, v in sorted(pts.items())]
+
+    # Combine Disk and EBS metrics
+    disk_read = dr_pts.copy()
+    for ts, v in er_pts.items():
+        disk_read[ts] = disk_read.get(ts, 0) + v
+
+    disk_write = dw_pts.copy()
+    for ts, v in ew_pts.items():
+        disk_write[ts] = disk_write.get(ts, 0) + v
+
+    return {
+        "instance_id": instance_id,
+        "hours": hours,
+        "period_seconds": period,
+        "metrics": {
+            "cpu":        _to_list(cpu_pts),
+            "network_in": _to_list(nin_pts),
+            "network_out": _to_list(nout_pts),
+            "disk_read":  _to_list(disk_read),
+            "disk_write": _to_list(disk_write),
+            "memory":     _to_list(mem_pts),
+        },
+    }
 
 
 @router.get("/instances/{instance_id}/metrics")
