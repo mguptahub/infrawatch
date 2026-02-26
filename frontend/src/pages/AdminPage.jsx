@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import { useAuth } from "../hooks/useAuth";
 
 const SERVICE_LABELS = {
-  ec2: "EC2", elb: "Load Balancers", eks: "EKS", rds: "RDS", elasticache: "ElastiCache",
+  ec2: "EC2", elb: "Load Balancers", eks: "EKS", databases: "Databases", elasticache: "ElastiCache",
   opensearch: "OpenSearch", mq: "Amazon MQ", ses: "SES",
   secrets: "Secrets Manager", cost: "Cost Explorer", alarms: "CloudWatch Alarms",
 };
