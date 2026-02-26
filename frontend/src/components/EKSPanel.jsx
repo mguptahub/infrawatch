@@ -82,7 +82,7 @@ export default function EKSPanel() {
               {sorted.map(c => (
                 <tr
                   key={c.arn}
-                  className={`row-clickable ${selected?.name === c.name ? "row-selected" : ""}`}
+                  className={`row-clickable ${selected?.arn === c.arn ? "row-selected" : ""}`}
                   onClick={() => setSelected(c)}
                 >
                   <td className="cell-bold">{c.name}</td>
@@ -262,7 +262,7 @@ function DetailDrawer({ cluster, onClose }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {detail.nodegroups.map(ng => (
+                      {(detail.nodegroups ?? []).map(ng => (
                         <tr key={ng.name}>
                           <td className="cell-bold">{ng.name}</td>
                           <td>
