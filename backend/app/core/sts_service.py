@@ -54,14 +54,26 @@ SERVICE_POLICIES = {
         ],
         "Resource": "*",
     },
+    "iam": {
+        "Effect": "Allow",
+        "Action": [
+            "iam:ListUsers",
+            "iam:GetUser",
+            "iam:GetLoginProfile",
+            "iam:GenerateCredentialReport",
+            "iam:GetCredentialReport",
+            "iam:ListGroupsForUser",
+            "iam:ListAttachedUserPolicies",
+            "iam:ListUserPolicies",
+            "iam:ListMFADevices",
+            "iam:ListAccessKeys",
+            "iam:GetAccessKeyLastUsed",
+        ],
+        "Resource": "*",
+    },
     "cost": {
         "Effect": "Allow",
         "Action": ["ce:Get*", "ce:List*", "ce:Describe*"],
-        "Resource": "*",
-    },
-    "alarms": {
-        "Effect": "Allow",
-        "Action": ["cloudwatch:Describe*", "cloudwatch:Get*", "cloudwatch:List*"],
         "Resource": "*",
     },
     "elb": {

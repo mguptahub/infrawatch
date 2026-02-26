@@ -4,11 +4,11 @@ import EC2Panel from "../components/EC2Panel";
 import EKSPanel from "../components/EKSPanel";
 import RDSPanel from "../components/RDSPanel";
 import CostPanel from "../components/CostPanel";
-import AlarmsPanel from "../components/AlarmsPanel";
 import OpenSearchPanel from "../components/OpenSearchPanel";
 import MQPanel from "../components/MQPanel";
 import ElastiCachePanel from "../components/ElastiCachePanel";
 import SecretsPanel from "../components/SecretsPanel";
+import IAMPanel from "../components/IAMPanel";
 import SESPanel from "../components/SESPanel";
 import LBPanel from "../components/LBPanel";
 
@@ -22,8 +22,8 @@ const ALL_TABS = [
   { id: "mq",          label: "MQ" },
   { id: "ses",         label: "SES" },
   { id: "secrets",     label: "Secrets" },
+  { id: "iam",         label: "IAM" },
   { id: "cost",        label: "Cost" },
-  { id: "alarms",      label: "Alarms" },
 ];
 
 const AWS_REGIONS = [
@@ -192,8 +192,8 @@ export default function DashboardPage() {
         {tab === "elb"         && <LBPanel />}
         {tab === "ses"         && <SESPanel />}
         {tab === "secrets"     && <SecretsPanel />}
+        {tab === "iam"         && <IAMPanel />}
         {tab === "cost"        && <CostPanel />}
-        {tab === "alarms"      && <AlarmsPanel />}
       </main>
     </div>
   );

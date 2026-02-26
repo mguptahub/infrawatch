@@ -5,7 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 const SERVICE_LABELS = {
   ec2: "EC2", elb: "Load Balancers", eks: "EKS", databases: "Databases", elasticache: "ElastiCache",
   opensearch: "OpenSearch", mq: "Amazon MQ", ses: "SES",
-  secrets: "Secrets Manager", cost: "Cost Explorer", alarms: "CloudWatch Alarms",
+  secrets: "Secrets Manager", iam: "IAM", cost: "Cost Explorer",
 };
 
 const STATUS_COLORS = {

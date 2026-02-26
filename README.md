@@ -19,8 +19,8 @@ The dashboard provides visibility into the following AWS services:
   - **Load Balancers (ALB/NLB)**: Monitor health and configuration.
   - **SES**: View account-level details and manage email identities and suppression lists.
 - **Security & Infrastructure**:
-  - **CloudWatch Alarms**: Consolidated view of all alarms across the account, sorted by severity.
   - **Secrets Manager**: List and view metadata for stored secrets.
+  - **IAM**: Browse IAM users and inspect their group/policy access details.
 - **Cost Management**:
   - **Billing**: View month-to-date totals, daily spend charts, and cost breakdown by service.
 
@@ -65,8 +65,8 @@ The dashboard itself requires an IAM profile or role with permissions to:
 
 - Describe the AWS resources listed above.
 - Call `sts:AssumeRole` to generate temporary credentials for users.
-- Call `ses:SendEmail` for sending OTPs and approval notifications.
+- Configure an SMTP relay (for example SES SMTP, Mailgun, or internal SMTP) for OTP and approval notifications.
 
 ## Architecture
 
-The system consists of a **FastAPI** backend (Python) communicating with the AWS SDK (boto3) and a **React** frontend (TypeScript) for the user interface. It uses **Valkey** (Redis alternative) for session management and **PostgreSQL** for storing user data and request history.
+The system consists of a **FastAPI** backend (Python) communicating with the AWS SDK (boto3) and a **React** frontend (JavaScript/JSX) for the user interface. It uses **Valkey** (Redis alternative) for session management and **PostgreSQL** for storing user data and request history.

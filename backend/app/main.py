@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from .core.session import session_store, SESSION_COOKIE_NAME, SESSION_TIMEOUT_MINUTES
 from .core.database import init_db
-from .routers import auth, ec2, eks, rds, cost, alarms, opensearch, mq, elasticache, secrets, ses, lb
+from .routers import auth, ec2, eks, rds, cost, opensearch, mq, elasticache, secrets, ses, lb, iam
 from .routers import otp_auth, requests_router, admin
 
 
@@ -49,11 +49,11 @@ app.include_router(ec2.router)
 app.include_router(eks.router)
 app.include_router(rds.router)
 app.include_router(cost.router)
-app.include_router(alarms.router)
 app.include_router(opensearch.router)
 app.include_router(mq.router)
 app.include_router(elasticache.router)
 app.include_router(secrets.router)
+app.include_router(iam.router)
 app.include_router(ses.router)
 app.include_router(lb.router)
 
