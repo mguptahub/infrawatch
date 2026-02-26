@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "infrawatch.fullname" . }}-celery-worker
+  labels:
+    {{- include "infrawatch.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-worker
+spec:
+  replicas: {{ .Values.celeryWorker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "infrawatch.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: celery-worker
+  template:
+    metadata:
+      labels:
+        {{- include "infrawatch.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: celery-worker
+    spec:
+      serviceAccountName: {{ include "infrawatch.serviceAccountName" . }}
+      containers:
+        - name: celery-worker
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
+          envFrom:
+            - secretRef:
+                name: {{ .Values.aws.existingSecret | default (include "infrawatch.fullname" .) }}
+          env:
+            - name: CELERY_BROKER_URL
+              value: {{ include "infrawatch.valkeyUrl" . | trim | quote }}
+          resources:
+            {{- toYaml .Values.celeryWorker.resources | nindent 12 }}

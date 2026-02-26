@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "infrawatch.fullname" . }}-celery-beat
+  labels:
+    {{- include "infrawatch.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-beat
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "infrawatch.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: celery-beat
+  template:
+    metadata:
+      labels:
+        {{- include "infrawatch.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: celery-beat
+    spec:
+      serviceAccountName: {{ include "infrawatch.serviceAccountName" . }}
+      containers:
+        - name: celery-beat
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command: ["celery", "-A", "app.celery_app", "beat", "--loglevel=info"]
+          envFrom:
+            - secretRef:
+                name: {{ .Values.aws.existingSecret | default (include "infrawatch.fullname" .) }}
+          env:
+            - name: CELERY_BROKER_URL
+              value: {{ include "infrawatch.valkeyUrl" . | trim | quote }}
+          resources:
+            {{- toYaml .Values.celeryBeat.resources | nindent 12 }}

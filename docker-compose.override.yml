@@ -1,0 +1,25 @@
+# docker-compose.override.yml — development overrides
+# Run with: docker compose up (auto-merged)
+name: infrawatch
+
+services:
+  backend:
+    build:
+      context: ./backend
+    volumes:
+      - ./backend:/app   # Hot reload via uvicorn --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      target: builder    # Stop at builder stage, don't run nginx
+    command: sh -c "npm start"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public

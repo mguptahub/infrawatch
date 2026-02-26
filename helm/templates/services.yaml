@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "infrawatch.fullname" . }}-backend
+  labels:
+    {{- include "infrawatch.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.backendPort }}
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "infrawatch.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "infrawatch.fullname" . }}-frontend
+  labels:
+    {{- include "infrawatch.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.frontendPort }}
+      targetPort: 80
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "infrawatch.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend

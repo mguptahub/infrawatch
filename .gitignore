@@ -1,0 +1,11 @@
+.env
+*.env
+node_modules/
+frontend/build/
+__pycache__/
+*.pyc
+.DS_Store
+secrets.json
+genkeys.sh
+.worktrees/
+.plans/

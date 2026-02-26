@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-theme-mode="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InfraWatch - AWS Infrastructure Monitoring & JIT Access Management</title>
+  <meta name="description" content="A central hub for monitoring AWS infrastructure and managing Just-In-Time (JIT) access with secure request-approval workflows.">
+  <meta name="keywords" content="AWS, InfraWatch, Infrastructure Monitoring, JIT Access, Security, EC2, RDS, EKS">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --background: #0a0a0a;
+      --foreground: #fafafa;
+      --muted: #171717;
+      --muted-foreground: #a1a1aa;
+      --border: #27272a;
+      --primary: #22c55e;
+      --primary-foreground: #0a0a0a;
+      --card: #141414;
+      --card-foreground: #fafafa;
+      --accent: #18181b;
+      --accent-foreground: #fafafa;
+      --radius: 0.75rem;
+      --nav-bg: rgba(10, 10, 10, 0.8);
+      --btn-primary-hover: #e4e4e7;
+      --logo-amber: #f5a623;
+    }
+
+    [data-theme="light"] {
+      --background: #f8fafc;
+      --foreground: #0f172a;
+      --muted: #e2e8f0;
+      --muted-foreground: #475569;
+      --border: #cbd5e1;
+      --primary: #16a34a;
+      --primary-foreground: #f8fafc;
+      --card: #ffffff;
+      --card-foreground: #0f172a;
+      --accent: #f1f5f9;
+      --accent-foreground: #0f172a;
+      --nav-bg: rgba(248, 250, 252, 0.85);
+      --btn-primary-hover: #e2e8f0;
+      --logo-amber: #f5a623;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--background);
+      color: var(--foreground);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: var(--nav-bg);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 600;
+      font-size: 1.125rem;
+      color: var(--foreground);
+      text-decoration: none;
+      line-height: 1;
+    }
+
+    .logo-icon {
+      width: auto;
+      height: auto;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      background: var(--accent);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.2rem;
+      gap: 0.2rem;
+    }
+
+    .theme-toggle button {
+      border: none;
+      background: transparent;
+      color: var(--muted-foreground);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.35rem 0.6rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .theme-toggle button[aria-pressed="true"] {
+      background: var(--foreground);
+      color: var(--background);
+    }
+
+    .theme-toggle button:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    .logo-icon svg {
+      width: 20px;
+      height: 20px;
+      color: var(--primary-foreground);
+    }
+
+    .logo-glyph {
+      display: block;
+      color: var(--logo-amber);
+      font-size: 3rem;
+      line-height: 1;
+      font-weight: 700;
+      filter: drop-shadow(0 0 10px rgba(245, 166, 35, 0.35));
+      padding-bottom: .7rem;
+    }
+
+    .nav-links {
+      display: none;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .nav-links a {
+      color: var(--muted-foreground);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--foreground);
+    }
+
+    .nav-buttons {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--foreground);
+      color: var(--background);
+    }
+
+    .btn-primary:hover {
+      background: var(--btn-primary-hover);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--foreground);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--accent);
+      border-color: var(--muted-foreground);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted-foreground);
+    }
+
+    .btn-ghost:hover {
+      color: var(--foreground);
+    }
+
+    .nav-version {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted-foreground);
+      padding: 0.35rem 0.7rem;
+      background: var(--accent);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 10rem 0 6rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(ellipse at center, rgba(34, 197, 94, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 1rem;
+      background: var(--accent);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.8125rem;
+      color: var(--muted-foreground);
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-badge span {
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+      text-wrap: balance;
+    }
+
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--foreground) 0%, var(--muted-foreground) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.125rem;
+      color: var(--muted-foreground);
+      max-width: 640px;
+      margin: 0 auto 2.5rem;
+      text-wrap: balance;
+    }
+
+    .hero-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-code {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 3rem;
+      padding: 0.75rem 1.25rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+    }
+
+    .hero-code code {
+      color: var(--foreground);
+    }
+
+    .hero-code button {
+      background: none;
+      border: none;
+      color: var(--muted-foreground);
+      cursor: pointer;
+      padding: 0.25rem;
+      display: flex;
+      transition: color 0.2s;
+    }
+
+    .hero-code button:hover {
+      color: var(--foreground);
+    }
+
+    .hero-preview {
+      margin-top: 3.5rem;
+      border-radius: 0.875rem;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    }
+
+    .hero-preview img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    /* Stats Section */
+    .stats {
+      padding: 4rem 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: 1.5rem;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--foreground);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value span {
+      color: var(--primary);
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+    }
+
+    /* Features Section */
+    .features {
+      padding: 6rem 0;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--primary);
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+
+    .section-label svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .section-header h2 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    .section-header p {
+      font-size: 1.125rem;
+      color: var(--muted-foreground);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--muted-foreground);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--accent);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .feature-icon svg {
+      width: 20px;
+      height: 20px;
+      color: var(--primary);
+    }
+
+    .feature-card h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card p {
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+      line-height: 1.6;
+    }
+
+    /* Services Section */
+    .services {
+      padding: 6rem 0;
+      background: var(--muted);
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .service-category {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .service-category h3 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+
+    .service-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .service-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.75rem;
+      background: var(--accent);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      color: var(--foreground);
+    }
+
+    .service-tag svg {
+      width: 14px;
+      height: 14px;
+      color: var(--muted-foreground);
+    }
+
+    /* Workflow Section */
+    .workflow {
+      padding: 6rem 0;
+    }
+
+    .workflow-steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .workflow-step {
+      display: flex;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      color: var(--primary-foreground);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-content h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.375rem;
+    }
+
+    .step-content p {
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+    }
+
+    /* Architecture Section */
+    .architecture {
+      padding: 6rem 0;
+      background: var(--muted);
+    }
+
+    .tech-stack {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-top: 3rem;
+    }
+
+    .tech-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .tech-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--accent);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+
+    .tech-info h4 {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      margin-bottom: 0.125rem;
+    }
+
+    .tech-info p {
+      font-size: 0.75rem;
+      color: var(--muted-foreground);
+    }
+
+    /* Deployment Section */
+    .cta {
+      padding: 6rem 0;
+    }
+
+    .cta-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 3rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-box h2 {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      position: relative;
+      text-align: center;
+    }
+
+    .deploy-tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .deploy-tab {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted-foreground);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.6rem 1.25rem;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+      font-family: inherit;
+    }
+
+    .deploy-tab:hover {
+      color: var(--foreground);
+    }
+
+    .deploy-tab.active {
+      color: var(--green);
+      border-bottom-color: var(--green);
+    }
+
+    .deploy-tab-icon {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      vertical-align: -2px;
+      margin-right: 0.4rem;
+    }
+
+    .deploy-pane {
+      display: none;
+    }
+
+    .deploy-pane.active {
+      display: block;
+    }
+
+    .deployment-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      position: relative;
+    }
+
+    .deployment-block {
+      background: var(--accent);
+      border: 1px solid var(--border);
+      border-radius: 0.875rem;
+      padding: 1rem;
+      display: grid;
+      gap: 0.75rem;
+      align-content: start;
+    }
+
+    .deployment-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .code-copy-btn {
+      border: 0;
+      background: transparent;
+      color: var(--muted-foreground);
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .code-copy-btn:hover {
+      background: var(--card);
+      color: var(--foreground);
+    }
+
+    .code-copy-btn:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    .code-copy-btn.copied {
+      color: var(--primary);
+    }
+
+    .code-copy-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .deployment-pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.85rem;
+      line-height: 1.45;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--foreground);
+    }
+
+    /* Footer */
+    footer {
+      position: relative;
+      padding: 3rem 0;
+    }
+
+    footer::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100vw;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      position: relative;
+    }
+
+    .footer-col {
+      padding: 1.25rem;
+      min-height: 136px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.85rem;
+    }
+
+    .footer-col-right {
+      padding-left: 2rem;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
+
+    .footer-links a {
+      color: var(--muted-foreground);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--foreground);
+    }
+
+    .footer-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.65rem;
+    }
+
+    .footer-meta a {
+      color: var(--muted-foreground);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .footer-meta a:hover {
+      color: var(--foreground);
+    }
+
+    .footer-meta a svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      flex: 0 0 auto;
+    }
+
+    .footer-copy {
+      font-size: 0.8125rem;
+      color: var(--muted-foreground);
+    }
+
+    /* Scroll to top */
+    .scroll-top-btn {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background: var(--foreground);
+      color: var(--background);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+      z-index: 999;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .scroll-top-btn.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .scroll-top-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Mobile Menu */
+    .mobile-menu-btn {
+      display: flex;
+      background: none;
+      border: none;
+      color: var(--foreground);
+      cursor: pointer;
+      padding: 0.5rem;
+    }
+
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 64px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--background);
+      padding: 1.5rem;
+      z-index: 99;
+    }
+
+    .mobile-menu.active {
+      display: block;
+    }
+
+    .mobile-menu a {
+      display: block;
+      padding: 1rem 0;
+      color: var(--foreground);
+      text-decoration: none;
+      font-size: 1.125rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Responsive */
+    @media (min-width: 640px) {
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .services-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .workflow-steps {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .tech-stack {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    @media (min-width: 768px) {
+      .nav-links {
+        display: flex;
+      }
+
+      .nav-buttons {
+        display: flex;
+      }
+
+      .mobile-menu-btn {
+        display: none;
+      }
+
+      .features-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .services-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .workflow-steps {
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .cta-box {
+        padding: 4rem 3rem;
+      }
+
+      .footer-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .footer-grid::before,
+      .footer-grid::after {
+        content: "";
+        position: absolute;
+        top: 0.75rem;
+        bottom: 0.75rem;
+        width: 1px;
+        background: var(--border);
+      }
+
+      .footer-grid::before {
+        left: 33.333%;
+      }
+
+      .footer-grid::after {
+        left: 66.666%;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .features-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .services-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-in {
+      animation: fadeIn 0.6s ease-out forwards;
+    }
+
+    .delay-100 { animation-delay: 0.1s; }
+    .delay-200 { animation-delay: 0.2s; }
+    .delay-300 { animation-delay: 0.3s; }
+
+    /* IAM Table */
+    .iam-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--card);
+    }
+
+    .iam-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    .iam-table thead {
+      background: var(--accent);
+    }
+
+    .iam-table th {
+      text-align: left;
+      padding: 0.75rem 1.25rem;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted-foreground);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .iam-table td {
+      padding: 0.65rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--foreground);
+    }
+
+    .iam-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .iam-table td:first-child {
+      font-weight: 500;
+      white-space: nowrap;
+      color: var(--foreground);
+    }
+
+    .iam-table code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      background: var(--accent);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--primary);
+    }
+
+    .iam-note {
+      font-size: 0.75rem;
+      color: var(--muted-foreground);
+      font-style: italic;
+    }
+
+    .iam-footer-note {
+      margin-top: 1.25rem;
+      font-size: 0.85rem;
+      color: var(--muted-foreground);
+      text-align: center;
+    }
+
+    .iam-details {
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--card);
+    }
+
+    .iam-summary {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 1rem 1.25rem;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--foreground);
+      list-style: none;
+      user-select: none;
+    }
+
+    .iam-summary::-webkit-details-marker { display: none; }
+    .iam-summary::marker { display: none; content: ""; }
+
+    .iam-summary svg:first-child {
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .iam-chevron {
+      margin-left: auto;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+      color: var(--muted-foreground);
+    }
+
+    .iam-details[open] .iam-chevron {
+      transform: rotate(180deg);
+    }
+
+    .iam-details-body {
+      padding: 0 1.25rem 1.25rem;
+    }
+
+    .iam-desc {
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+      margin-bottom: 1rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav>
+    <div class="container nav-content">
+      <a href="#" class="logo">
+        <div class="logo-icon">
+          <span class="logo-glyph">⬡</span>
+        </div>
+        InfraWatch
+      </a>
+      
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#services">Services</a>
+        <a href="#workflow">Workflow</a>
+        <a href="#architecture">Architecture</a>
+      </div>
+
+      <div class="nav-buttons">
+        <span class="nav-version">v0.1.0</span>
+        <a href="#get-started" class="btn btn-primary">
+          Get Started
+        </a>
+      </div>
+
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#features" onclick="toggleMobileMenu()">Features</a>
+    <a href="#services" onclick="toggleMobileMenu()">Services</a>
+    <a href="#workflow" onclick="toggleMobileMenu()">Workflow</a>
+    <a href="#architecture" onclick="toggleMobileMenu()">Architecture</a>
+    <a href="#get-started" onclick="toggleMobileMenu()">Get Started</a>
+  </div>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">
+        AWS Infrastructure Monitoring
+      </div>
+      
+      <h1>
+        <span class="gradient">Monitor AWS.</span><br>
+        Manage JIT Access.
+      </h1>
+      
+      <p>
+        A central hub for real-time AWS infrastructure visibility combined with secure Just-In-Time access management using AWS STS temporary credentials.
+      </p>
+
+      <div class="hero-buttons">
+        <a href="#get-started" class="btn btn-primary">
+          Get Started
+        </a>
+        <a href="#features" class="btn btn-secondary">
+          Learn More
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14M19 12l-7 7-7-7"/>
+          </svg>
+        </a>
+      </div>
+
+      <!-- <div class="hero-code">
+        <code>git clone https://github.com/mguptahub/infrawatch.git</code>
+        <button onclick="copyToClipboard('git clone https://github.com/mguptahub/infrawatch.git')" title="Copy to clipboard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        </button>
+      </div> -->
+
+      <div class="hero-preview">
+        <img src="assets/images/dashboard-preview.png" alt="InfraWatch — panels with live metric widgets for ElastiCache, Databases, OpenSearch and more" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Section -->
+  <section class="stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value"><span>12+</span></div>
+          <div class="stat-label">AWS Services Supported</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value"><span>3</span></div>
+          <div class="stat-label">User Roles</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value"><span>STS</span></div>
+          <div class="stat-label">Temporary Credentials</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value"><span>OTP</span></div>
+          <div class="stat-label">Secure Verification</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          Features
+        </div>
+        <h2>Everything you need for AWS visibility</h2>
+        <p>Real-time monitoring, secure access management, and comprehensive cost tracking in one unified dashboard.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
+          <h3>Real-Time Monitoring</h3>
+          <p>Track EC2 instances, EKS clusters, RDS databases, and more with live status updates and CloudWatch metrics.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <h3>JIT Access Control</h3>
+          <p>Request-approval workflow with temporary AWS STS credentials. Reduce long-term IAM credential exposure.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <h3>Role-Based Access</h3>
+          <p>Employee, Manager, and Admin roles with granular permissions for viewing and approving access requests.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <h3>Cost Management</h3>
+          <p>View month-to-date totals, daily spend charts, and detailed cost breakdown by AWS service.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+            </svg>
+          </div>
+          <h3>Custom Dashboards</h3>
+          <p>Build personalized views with drag-and-drop panels and metric widgets. Collapse, reorder, and organize your monitoring layout.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <h3>Auto-Expiring Sessions</h3>
+          <p>Temporary credentials automatically terminate when the requested duration expires for enhanced security.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services Section -->
+  <section class="services" id="services">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+          </svg>
+          AWS Services
+        </div>
+        <h2>Comprehensive AWS Coverage</h2>
+        <p>Monitor and manage access across all your critical AWS infrastructure components.</p>
+      </div>
+
+      <div class="services-grid">
+        <div class="service-category">
+          <h3>Compute</h3>
+          <div class="service-list">
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+              EC2
+            </span>
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+              EKS
+            </span>
+          </div>
+        </div>
+
+        <div class="service-category">
+          <h3>Databases & Cache</h3>
+          <div class="service-list">
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+              RDS
+            </span>
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              ElastiCache
+            </span>
+          </div>
+        </div>
+
+        <div class="service-category">
+          <h3>Integration & Messaging</h3>
+          <div class="service-list">
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              OpenSearch
+            </span>
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+              Amazon MQ
+            </span>
+          </div>
+        </div>
+
+        <div class="service-category">
+          <h3>Networking & Delivery</h3>
+          <div class="service-list">
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+              ALB/NLB
+            </span>
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+              SES
+            </span>
+          </div>
+        </div>
+
+        <div class="service-category">
+          <h3>Security & Infrastructure</h3>
+          <div class="service-list">
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+              Secrets Manager
+            </span>
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              IAM
+            </span>
+          </div>
+        </div>
+
+        <div class="service-category">
+          <h3>Cost Management</h3>
+          <div class="service-list">
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              Billing
+            </span>
+            <span class="service-tag">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+              Cost Explorer
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Workflow Section -->
+  <section class="workflow" id="workflow">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          Access Workflow
+        </div>
+        <h2>Secure JIT Access in 4 Steps</h2>
+        <p>Request, approve, activate, and auto-expire. Secure temporary credentials with zero standing access.</p>
+      </div>
+
+      <div class="workflow-steps">
+        <div class="workflow-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Request Phase</h3>
+            <p>Employee requests access to specific AWS services for a defined duration.</p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Approval Phase</h3>
+            <p>Manager receives notification and verifies identity via 6-digit OTP.</p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Activation Phase</h3>
+            <p>AWS STS generates temporary credentials for the approved services.</p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h3>Session Management</h3>
+            <p>Access automatically terminates when the duration expires.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture Section -->
+  <section class="architecture" id="architecture">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          Architecture
+        </div>
+        <h2>Built with Modern Technology</h2>
+        <p>A robust stack designed for reliability, security, and developer productivity.</p>
+      </div>
+
+      <div class="tech-stack">
+        <div class="tech-item">
+          <div class="tech-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <div class="tech-info">
+            <h4>FastAPI</h4>
+            <p>Python Backend</p>
+          </div>
+        </div>
+
+        <div class="tech-item">
+          <div class="tech-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/></svg>
+          </div>
+          <div class="tech-info">
+            <h4>React</h4>
+            <p>Frontend UI</p>
+          </div>
+        </div>
+
+        <div class="tech-item">
+          <div class="tech-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          </div>
+          <div class="tech-info">
+            <h4>PostgreSQL</h4>
+            <p>Database</p>
+          </div>
+        </div>
+
+        <div class="tech-item">
+          <div class="tech-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div class="tech-info">
+            <h4>Valkey</h4>
+            <p>Session Cache</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+	  <!-- Deployment Section -->
+  <section class="cta" id="get-started">
+    <div class="container">
+      <div class="cta-box">
+        <h2>Get Started</h2>
+
+        <details class="iam-details">
+          <summary class="iam-summary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            Prerequisite: IAM Setup
+            <svg class="iam-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </summary>
+          <div class="iam-details-body">
+            <p class="iam-desc">Create an IAM user with programmatic access and set its credentials as <code>POWER_AWS_ACCESS_KEY_ID</code> and <code>POWER_AWS_SECRET_ACCESS_KEY</code> in your <code>.env</code>. This user must be allowed to call <code>sts:AssumeRole</code> on the role specified by <code>BASE_ROLE_ARN</code>. The backend assumes that role and applies a restrictive session policy per request — each approved service maps to a scoped IAM statement. CloudWatch is always included for metrics.</p>
+            <p class="iam-desc">The base role (<code>BASE_ROLE_ARN</code>) must have the following permissions:</p>
+            <div class="iam-table-wrap">
+              <table class="iam-table">
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Required IAM Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>EC2</td><td><code>ec2:Describe*</code></td></tr>
+                  <tr><td>EKS</td><td><code>eks:List*</code>, <code>eks:Describe*</code></td></tr>
+                  <tr><td>Databases</td><td><code>rds:Describe*</code>, <code>rds:List*</code>, <code>docdb:Describe*</code>, <code>docdb:List*</code></td></tr>
+                  <tr><td>ElastiCache</td><td><code>elasticache:Describe*</code>, <code>elasticache:List*</code></td></tr>
+                  <tr><td>OpenSearch</td><td><code>es:List*</code>, <code>es:Describe*</code>, <code>es:ESHttpGet</code></td></tr>
+                  <tr><td>MQ</td><td><code>mq:List*</code>, <code>mq:Describe*</code></td></tr>
+                  <tr><td>SES</td><td><code>ses:*</code>, <code>sesv2:*</code></td></tr>
+                  <tr><td>Secrets Manager</td><td><code>secretsmanager:Get*</code>, <code>secretsmanager:List*</code>, <code>secretsmanager:Describe*</code></td></tr>
+                  <tr><td>IAM</td><td><code>iam:Get*</code>, <code>iam:List*</code>, <code>iam:GenerateCredentialReport</code></td></tr>
+                  <tr><td>Cost Explorer</td><td><code>ce:Get*</code>, <code>ce:List*</code>, <code>ce:Describe*</code></td></tr>
+                  <tr><td>Load Balancers</td><td><code>elasticloadbalancing:Describe*</code></td></tr>
+                  <tr><td>CloudWatch</td><td><code>cloudwatch:Get*</code>, <code>cloudwatch:List*</code> <span class="iam-note">(always included)</span></td></tr>
+                  <tr><td>AWS Health</td><td><code>health:Describe*</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="iam-footer-note">Session policies can only restrict, never expand, the base role's permissions.</p>
+          </div>
+        </details>
+
+        <div class="deploy-tabs">
+          <button type="button" class="deploy-tab active" data-tab="docker" onclick="switchDeployTab('docker')">
+            <svg class="deploy-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/></svg>Docker Compose
+          </button>
+          <button type="button" class="deploy-tab" data-tab="k8s" onclick="switchDeployTab('k8s')">
+            <svg class="deploy-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Kubernetes (Helm)
+          </button>
+        </div>
+
+        <!-- Docker Compose pane -->
+        <div class="deploy-pane active" id="pane-docker">
+          <div class="deployment-panel">
+            <div class="deployment-block">
+              <div class="deployment-title">
+                <span>Step 1 · .env</span>
+                <button type="button" class="code-copy-btn" data-copy-target="deployment-env" aria-label="Copy Step 1 code">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/>
+                  </svg>
+                </button>
+              </div>
+              <pre id="deployment-env" class="deployment-pre"># Admin
+ADMIN_EMAIL=admin@company.com
+
+# AWS Power Keys (server-side only)
+POWER_AWS_ACCESS_KEY_ID=...
+POWER_AWS_SECRET_ACCESS_KEY=...
+POWER_AWS_REGION=us-east-1
+BASE_ROLE_ARN=arn:aws:iam::123456789012:role/PowerUserRole
+
+# Collector regions (optional — empty = all)
+# COLLECTOR_REGIONS=us-east-1,us-east-2,us-west-2
+
+# SMTP
+SMTP_HOST=smtp.company.com
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASSWORD=...
+SMTP_FROM=noreply@company.com
+
+# Postgres
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=awsdashboard
+POSTGRES_USER=awsdashboard
+POSTGRES_PASSWORD=&lt;strong-password&gt;
+
+# Valkey
+VALKEY_PASSWORD=&lt;strong-password&gt;
+VALKEY_URL=redis://:${VALKEY_PASSWORD}@valkey:6379
+
+# App
+COOKIE_SECURE=false
+CORS_ORIGINS=http://localhost:4000
+OTP_EXPIRY_MINUTES=10
+OTP_MAX_ATTEMPTS=5
+
+# Auto-registration (optional)
+# ALLOWED_DOMAINS=company.com,contractor.com</pre>
+            </div>
+            <div class="deployment-block">
+              <div class="deployment-title">
+                <span>Step 2 · docker-compose.yml</span>
+                <button type="button" class="code-copy-btn" data-copy-target="deployment-compose" aria-label="Copy Step 2 code">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/>
+                  </svg>
+                </button>
+              </div>
+              <pre id="deployment-compose" class="deployment-pre">services:
+  backend:
+    image: mguptahub/infrawatch-backend:latest
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - valkey
+
+  frontend:
+    image: mguptahub/infrawatch-frontend:latest
+    ports:
+      - "4000:80"
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-awsdashboard}
+      POSTGRES_USER: ${POSTGRES_USER:-awsdashboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--requirepass", "${VALKEY_PASSWORD:?required}"]
+
+volumes:
+  db_data:</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kubernetes (Helm) pane -->
+        <div class="deploy-pane" id="pane-k8s">
+          <div class="deployment-panel">
+            <div class="deployment-block">
+              <div class="deployment-title">
+                <span>values.yaml</span>
+                <button type="button" class="code-copy-btn" data-copy-target="deployment-values" aria-label="Copy values.yaml">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/>
+                  </svg>
+                </button>
+              </div>
+              <pre id="deployment-values" class="deployment-pre"># AWS credentials
+aws:
+  powerAccessKeyId: "AKIA..."
+  powerSecretAccessKey: "..."
+  region: us-east-1
+  baseRoleArn: "arn:aws:iam::123456789012:role/..."
+
+# Application
+app:
+  adminEmail: admin@company.com
+  cookieSecure: true
+  corsOrigins: https://infrawatch.example.com
+
+# SMTP
+smtp:
+  host: smtp.company.com
+  port: 587
+  user: "..."
+  password: "..."
+  from: noreply@company.com
+
+# PostgreSQL (in-cluster)
+postgresql:
+  enabled: true
+  auth:
+    password: "&lt;strong-password&gt;"
+
+# External PostgreSQL (set postgresql.enabled: false)
+# externalPostgresql:
+#   host: my-rds.example.com
+#   password: "secret"
+
+# Valkey (in-cluster)
+valkey:
+  enabled: true
+  password: "&lt;strong-password&gt;"
+
+# External Valkey (set valkey.enabled: false)
+# externalValkey:
+#   url: redis://:pass@my-redis:6379
+
+# Ingress
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: infrawatch.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: infrawatch-tls
+      hosts:
+        - infrawatch.example.com</pre>
+            </div>
+            <div class="deployment-block">
+              <div class="deployment-title">
+                <span>Install</span>
+                <button type="button" class="code-copy-btn" data-copy-target="deployment-helm" aria-label="Copy Helm commands">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/>
+                  </svg>
+                </button>
+              </div>
+              <pre id="deployment-helm" class="deployment-pre"># Add the Helm repo
+helm repo add infrawatch \
+  https://infrawatch.mguptahub.com/helm
+helm repo update
+
+# Install with values file
+helm install infrawatch infrawatch/infrawatch \
+  -f values.yaml
+
+# Or use --set flags directly
+helm install infrawatch infrawatch/infrawatch \
+  --set aws.powerAccessKeyId=AKIA... \
+  --set aws.powerSecretAccessKey=... \
+  --set aws.baseRoleArn=arn:aws:iam::... \
+  --set app.adminEmail=admin@company.com \
+  --set smtp.host=smtp.company.com \
+  --set smtp.from=noreply@company.com \
+  --set postgresql.auth.password=secret \
+  --set valkey.password=secret</pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-grid">
+      <div class="footer-col">
+        <a href="#" class="logo">
+          <div class="logo-icon">
+            <span class="logo-glyph">⬡</span>
+          </div>
+          InfraWatch
+        </a>
+        <div class="footer-copy">© 2026 mguptahub</div>
+      </div>
+
+      <div class="footer-col">
+        <div class="footer-links">
+          <a href="https://github.com/mguptahub/infrawatch#quick-start" target="_blank" rel="noopener">Documentation</a>
+          <a href="https://github.com/mguptahub/infrawatch/issues" target="_blank" rel="noopener">Issues</a>
+          <a href="https://github.com/mguptahub/infrawatch/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
+        </div>
+      </div>
+
+      <div class="footer-col footer-col-right">
+        <div class="footer-meta">
+          <!-- GitHub link hidden until repo is public -->
+          <div class="theme-toggle" role="group" aria-label="Theme mode">
+            <button type="button" data-theme-btn="light" aria-pressed="false">Light</button>
+            <button type="button" data-theme-btn="dark" aria-pressed="false">Dark</button>
+            <button type="button" data-theme-btn="auto" aria-pressed="true">System</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <button id="scrollTopBtn" class="scroll-top-btn" aria-label="Back to top">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+  </button>
+
+  <script>
+    const root = document.documentElement;
+    const storageKey = "infrawatch-theme";
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const resolvedTheme = (theme) => {
+      if (theme === "auto") {
+        return systemTheme.matches ? "dark" : "light";
+      }
+      return theme;
+    };
+
+    const syncThemeButtons = (theme) => {
+      document.querySelectorAll("[data-theme-btn]").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.themeBtn === theme));
+      });
+    };
+
+    const applyTheme = (theme) => {
+      const actualTheme = resolvedTheme(theme);
+      root.setAttribute("data-theme", actualTheme);
+      root.setAttribute("data-theme-mode", theme);
+      if (themeMeta) {
+        themeMeta.setAttribute("content", actualTheme === "dark" ? "#0a0a0a" : "#f8fafc");
+      }
+      syncThemeButtons(theme);
+    };
+
+    const initTheme = () => {
+      const savedTheme = localStorage.getItem(storageKey) || "dark";
+      applyTheme(savedTheme);
+    };
+
+    document.querySelectorAll("[data-theme-btn]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const selectedTheme = button.dataset.themeBtn;
+        localStorage.setItem(storageKey, selectedTheme);
+        applyTheme(selectedTheme);
+      });
+    });
+
+    if (typeof systemTheme.addEventListener === "function") {
+      systemTheme.addEventListener("change", () => {
+        if ((localStorage.getItem(storageKey) || "auto") === "auto") {
+          applyTheme("auto");
+        }
+      });
+    } else if (typeof systemTheme.addListener === "function") {
+      systemTheme.addListener(() => {
+        if ((localStorage.getItem(storageKey) || "auto") === "auto") {
+          applyTheme("auto");
+        }
+      });
+    }
+
+    // Mobile menu toggle
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobileMenu');
+      menu.classList.toggle('active');
+    }
+
+    // Deploy tab switcher
+    function switchDeployTab(tab) {
+      document.querySelectorAll('.deploy-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+      document.querySelectorAll('.deploy-pane').forEach(pane => pane.classList.toggle('active', pane.id === 'pane-' + tab));
+    }
+
+    // Copy to clipboard
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        // Show feedback
+        const btn = event.currentTarget;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        setTimeout(() => {
+          btn.innerHTML = originalHTML;
+        }, 2000);
+      });
+    }
+
+    const copyBlockText = async (targetId) => {
+      const node = document.getElementById(targetId);
+      if (!node) return false;
+      const text = node.textContent || "";
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (_error) {
+        const temp = document.createElement("textarea");
+        temp.value = text;
+        temp.setAttribute("readonly", "true");
+        temp.style.position = "absolute";
+        temp.style.left = "-9999px";
+        document.body.appendChild(temp);
+        temp.select();
+        const copied = document.execCommand("copy");
+        document.body.removeChild(temp);
+        return copied;
+      }
+    };
+
+    document.querySelectorAll(".code-copy-btn").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const copied = await copyBlockText(button.dataset.copyTarget);
+        if (!copied) return;
+        button.classList.add("copied");
+        setTimeout(() => {
+          button.classList.remove("copied");
+        }, 1200);
+      });
+    });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+
+    // Intersection Observer for animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate-in');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.feature-card, .service-category, .workflow-step, .tech-item').forEach(el => {
+      el.style.opacity = '0';
+      observer.observe(el);
+    });
+
+    initTheme();
+
+    // Scroll to top button
+    const scrollTopBtn = document.getElementById('scrollTopBtn');
+    window.addEventListener('scroll', () => {
+      scrollTopBtn.classList.toggle('visible', window.scrollY > 400);
+    }, { passive: true });
+    scrollTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  </script>
+</body>
+</html>

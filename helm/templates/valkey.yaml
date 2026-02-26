@@ -1,0 +1,86 @@
+{{- if .Values.valkey.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "infrawatch.fullname" . }}-valkey
+  labels:
+    {{- include "infrawatch.labels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "infrawatch.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: valkey
+  template:
+    metadata:
+      labels:
+        {{- include "infrawatch.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: valkey
+    spec:
+      containers:
+        - name: valkey
+          image: "{{ .Values.valkey.image.repository }}:{{ .Values.valkey.image.tag }}"
+          {{- if .Values.valkey.password }}
+          command: ["valkey-server", "--requirepass", {{ .Values.valkey.password | quote }}]
+          {{- end }}
+          ports:
+            - containerPort: 6379
+              protocol: TCP
+          {{- if .Values.valkey.persistence.enabled }}
+          volumeMounts:
+            - name: valkey-data
+              mountPath: /data
+          {{- end }}
+          readinessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.valkey.resources | nindent 12 }}
+      {{- if .Values.valkey.persistence.enabled }}
+      volumes:
+        - name: valkey-data
+          persistentVolumeClaim:
+            claimName: {{ include "infrawatch.fullname" . }}-valkey
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "infrawatch.fullname" . }}-valkey
+  labels:
+    {{- include "infrawatch.labels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: 6379
+      protocol: TCP
+  selector:
+    {{- include "infrawatch.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+{{- if .Values.valkey.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "infrawatch.fullname" . }}-valkey
+  labels:
+    {{- include "infrawatch.labels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.valkey.persistence.storageClass }}
+  storageClassName: {{ .Values.valkey.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.valkey.persistence.size }}
+{{- end }}
+{{- end }}

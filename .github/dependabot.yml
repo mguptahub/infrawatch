@@ -1,0 +1,74 @@
+version: 2
+
+updates:
+  # Frontend — npm
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+      ui-libs:
+        patterns:
+          - "recharts"
+          - "lucide-react"
+    ignore:
+      # CRA is unmaintained — no updates needed
+      - dependency-name: "react-scripts"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
+      # React 19 is a major rewrite — hold at 18.x
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      # recharts v3 has breaking API changes
+      - dependency-name: "recharts"
+        update-types: ["version-update:semver-major"]
+
+  # Backend — pip
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    ignore:
+      # Core framework — patch only, minor versions can have breaking changes
+      - dependency-name: "fastapi"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "pydantic"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "pydantic-settings"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "sqlalchemy"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "uvicorn"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # valkey/slowapi/limits — small libs, patch only
+      - dependency-name: "valkey"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "slowapi"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "limits"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # boto3 is safe to track minor (AWS adds services, never removes)
+      # so only block major bumps
+      - dependency-name: "boto3"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    ignore:
+      # Major version bumps (e.g. actions/checkout@v3 -> v4) need manual review
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
