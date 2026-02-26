@@ -65,6 +65,7 @@ export const api = {
   getEC2Metrics:  (id, hours = 24) => req(`/api/ec2/instances/${id}/metrics?hours=${hours}`),
   getEKS:         (force = false) => req(withForce("/api/eks/clusters", force)),
   getEKSDetail:   (name) => req(`/api/eks/clusters/${encodeURIComponent(name)}`),
+  getEKSNodes:    (name) => req(`/api/eks/clusters/${encodeURIComponent(name)}/nodes`),
   getRDS:         (force = false) => req(withForce("/api/rds/instances", force)),
   getRDSDetail:   (id, is_cluster = false) => req(`/api/rds/detail?id=${encodeURIComponent(id)}&is_cluster=${is_cluster}`),
   getRDSMetrics:  (id, is_cluster = false, hours = 24) => req(`/api/rds/metrics?id=${encodeURIComponent(id)}&is_cluster=${is_cluster}&hours=${hours}`),
