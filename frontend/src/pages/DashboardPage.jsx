@@ -16,7 +16,7 @@ const ALL_TABS = [
   { id: "ec2",         label: "EC2" },
   { id: "elb",         label: "Load Balancers" },
   { id: "eks",         label: "EKS" },
-  { id: "rds",         label: "RDS" },
+  { id: "databases",   label: "Databases" },
   { id: "elasticache", label: "ElastiCache" },
   { id: "opensearch",  label: "OpenSearch" },
   { id: "mq",          label: "MQ" },
@@ -185,7 +185,7 @@ export default function DashboardPage() {
       <main key={contentKey} className="dash-content">
         {tab === "ec2"         && <EC2Panel />}
         {tab === "eks"         && <EKSPanel />}
-        {tab === "rds"         && <RDSPanel />}
+        {tab === "databases"   && <RDSPanel />}
         {tab === "elasticache" && <ElastiCachePanel />}
         {tab === "opensearch"  && <OpenSearchPanel />}
         {tab === "mq"          && <MQPanel />}

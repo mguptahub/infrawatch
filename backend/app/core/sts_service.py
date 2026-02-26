@@ -16,7 +16,7 @@ SERVICE_POLICIES = {
         "Action": ["eks:List*", "eks:Describe*"],
         "Resource": "*",
     },
-    "rds": {
+    "databases": {
         "Effect": "Allow",
         "Action": ["rds:Describe*", "rds:List*"],
         "Resource": "*",
