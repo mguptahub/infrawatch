@@ -192,4 +192,6 @@ def get_eks_cluster_detail(name: str, request: Request):
     try:
         return _fetch_eks_detail(session, name)
     except ClientError as e:
+        if e.response["Error"]["Code"] == "ResourceNotFoundException":
+            raise HTTPException(status_code=404, detail=f"EKS cluster '{name}' not found")
         raise HTTPException(status_code=500, detail=str(e))
