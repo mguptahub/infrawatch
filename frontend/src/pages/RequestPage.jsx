@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
+import { useAuth } from "../hooks/useAuth";
 
 const SERVICE_LABELS = {
   ec2: "EC2", elb: "Load Balancers", eks: "EKS", databases: "Databases", elasticache: "ElastiCache",
@@ -8,12 +9,17 @@ const SERVICE_LABELS = {
 };
 
 export default function RequestPage({ initialEmail = "", onBack }) {
+  const { loginWithOTP } = useAuth();
   const [email, setEmail] = useState(initialEmail);
   const [services, setServices] = useState([]);
   const [duration, setDuration] = useState(4);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [submission, setSubmission] = useState(null);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState(null);
 
   function toggleService(s) {
     setServices((prev) =>
@@ -27,8 +33,10 @@ export default function RequestPage({ initialEmail = "", onBack }) {
     setLoading(true);
     setError(null);
     try {
-      await api.submitRequest(email.trim().toLowerCase(), services, duration);
-      setSubmitted(true);
+      const normalizedEmail = email.trim().toLowerCase();
+      const result = await api.submitRequest(normalizedEmail, services, duration);
+      setEmail(normalizedEmail);
+      setSubmission(result);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -36,18 +44,87 @@ export default function RequestPage({ initialEmail = "", onBack }) {
     }
   }
 
-  if (submitted) {
+  async function handleSendOTPNow() {
+    setOtpLoading(true);
+    setOtpError(null);
+    try {
+      await api.requestOTP(email);
+      setOtpSent(true);
+    } catch (err) {
+      setOtpError(err.message);
+    } finally {
+      setOtpLoading(false);
+    }
+  }
+
+  async function handleLoginNow(e) {
+    e.preventDefault();
+    setOtpLoading(true);
+    setOtpError(null);
+    try {
+      await loginWithOTP(email, otpCode.trim());
+    } catch (err) {
+      setOtpError(err.message);
+      setOtpCode("");
+    } finally {
+      setOtpLoading(false);
+    }
+  }
+
+  if (submission) {
+    const isAutoApproved = !!submission.auto_approved;
     return (
       <div className="login-page">
         <div className="login-card">
           <div className="login-logo">
             <span className="logo-icon" style={{ color: "var(--green)" }}>✓</span>
-            <h1>Request Submitted</h1>
-            <p>Your manager has been notified and will review your request shortly.</p>
+            <h1>{isAutoApproved ? "Access Approved" : "Request Submitted"}</h1>
+            <p>
+              {isAutoApproved
+                ? "You are pre-approved. You can log in now or come back later."
+                : "Your manager has been notified and will review your request shortly."}
+            </p>
           </div>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", textAlign: "center", marginTop: "1rem" }}>
-            You'll receive an email when your request is approved.
-          </p>
+
+          {!isAutoApproved && (
+            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", textAlign: "center", marginTop: "1rem" }}>
+              You'll receive an email when your request is approved.
+            </p>
+          )}
+
+          {isAutoApproved && !otpSent && (
+            <button className="login-btn" style={{ marginTop: "1.25rem", marginRight: "1.25rem" }} onClick={handleSendOTPNow} disabled={otpLoading}>
+              {otpLoading ? "Sending code…" : "Get OTP & Login Now"}
+            </button>
+          )}
+
+          {isAutoApproved && otpSent && (
+            <form onSubmit={handleLoginNow} className="login-form" style={{ marginTop: "1rem" }}>
+              <p className="otp-hint">
+                A 6-digit code was sent to <strong>{email}</strong>
+              </p>
+              <div className="field">
+                <label>Verification Code</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000000"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="otp-input"
+                  autoFocus
+                  required
+                />
+              </div>
+              {otpError && <div className="login-error">{otpError}</div>}
+              <button type="submit" className="login-btn" disabled={otpLoading || otpCode.length !== 6}>
+                {otpLoading ? "Verifying…" : "Log In"}
+              </button>
+            </form>
+          )}
+
+          {otpError && !otpSent && <div className="login-error" style={{ marginTop: "0.75rem" }}>{otpError}</div>}
+
           <button className="login-btn" style={{ marginTop: "1.5rem" }} onClick={onBack}>
             Back to Login
           </button>

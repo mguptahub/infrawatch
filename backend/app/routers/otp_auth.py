@@ -147,10 +147,12 @@ async def verify_otp_and_login(
 
     return {
         "success": True,
-        "role": "user",
+        "authenticated": True,
+        "role": "keys",
         "email": email,
         "name": user.name,
         "services": active_request.services,
+        "region": creds["region"],
     }
 
 
