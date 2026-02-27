@@ -1361,11 +1361,15 @@ POSTGRES_HOST=db
 POSTGRES_PORT=5432
 POSTGRES_DB=awsdashboard
 POSTGRES_USER=awsdashboard
-POSTGRES_PASSWORD=changeme
+POSTGRES_PASSWORD=&lt;strong-password&gt;
 
-VALKEY_URL=redis://valkey:6379
+VALKEY_PASSWORD=&lt;strong-password&gt;
+VALKEY_URL=redis://:${VALKEY_PASSWORD}@valkey:6379
 
-SECRET_KEY=change-me</pre>
+COOKIE_SECURE=false
+CORS_ORIGINS=http://localhost:4000,https://dashboard.example.com
+OTP_EXPIRY_MINUTES=10
+OTP_MAX_ATTEMPTS=5</pre>
           </div>
           <div class="deployment-block">
             <div class="deployment-title">
@@ -1395,16 +1399,15 @@ SECRET_KEY=change-me</pre>
   db:
     image: postgres:16
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-aws_dashboard}
-      - POSTGRES_USER=${POSTGRES_USER:-aws_dashboard}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-aws_dashboard}
+      POSTGRES_DB: ${POSTGRES_DB:-awsdashboard}
+      POSTGRES_USER: ${POSTGRES_USER:-awsdashboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - db_data:/var/lib/postgresql/data
 
   valkey:
-    image: valkey/valkey:7
-    volumes:
-      - valkey_data:/data
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--requirepass", "${VALKEY_PASSWORD:?VALKEY_PASSWORD is required}"]
 
 volumes:
   db_data:
