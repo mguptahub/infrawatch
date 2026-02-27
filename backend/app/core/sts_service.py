@@ -87,6 +87,13 @@ SERVICE_POLICIES = {
 
 ALL_SERVICES = list(SERVICE_POLICIES.keys())
 
+# Always included — metrics panels call CloudWatch regardless of which service is approved.
+_CLOUDWATCH_STATEMENT = {
+    "Effect": "Allow",
+    "Action": ["cloudwatch:GetMetricData", "cloudwatch:GetMetricStatistics", "cloudwatch:ListMetrics"],
+    "Resource": "*",
+}
+
 
 def assume_role_for_services(services: list, duration_hours: int, session_name: str) -> dict:
     """
@@ -96,10 +103,11 @@ def assume_role_for_services(services: list, duration_hours: int, session_name: 
     if not settings.power_aws_access_key_id or not settings.base_role_arn:
         raise RuntimeError("Power AWS keys and BASE_ROLE_ARN must be configured")
 
-    # Build session policy combining requested services
+    # Build session policy combining requested services + CloudWatch (always needed for metrics)
     statements = [SERVICE_POLICIES[s] for s in services if s in SERVICE_POLICIES]
     if not statements:
         raise ValueError("No valid services requested")
+    statements.append(_CLOUDWATCH_STATEMENT)
 
     session_policy = json.dumps({"Version": "2012-10-17", "Statement": statements})
 
