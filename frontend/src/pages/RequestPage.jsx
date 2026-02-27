@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../hooks/useAuth";
 
@@ -25,6 +25,11 @@ export default function RequestPage({ initialEmail = "", onBack }) {
   const [allowedServices, setAllowedServices] = useState(null); // null = not yet fetched
   const [maxDuration, setMaxDuration] = useState(12);
   const configEmailRef = useRef(""); // tracks which email was last fetched
+
+  // Auto-fetch config when the page opens with a prefilled email (redirect from login)
+  useEffect(() => {
+    if (initialEmail) fetchConfig(initialEmail);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [regStage, setRegStage] = useState(null); // null | "verify"
   const [regOtp, setRegOtp] = useState("");

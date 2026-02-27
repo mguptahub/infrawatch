@@ -11,7 +11,8 @@ async function req(path, options = {}) {
       window.dispatchEvent(new CustomEvent("session-expired"));
     }
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || "Request failed");
+    // FastAPI uses `detail`; slowapi rate-limit responses use `error`
+    throw new Error(err.detail || err.error || "Request failed");
   }
   return res.json();
 }
