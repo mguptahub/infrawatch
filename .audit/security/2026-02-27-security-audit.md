@@ -13,9 +13,9 @@
 |----------|-------|-------|
 | Critical | 4 | 4 |
 | High | 4 | 4 |
-| Medium | 7 | 3 |
+| Medium | 7 | 4 |
 | Low | 2 | 0 |
-| **Total** | **17** | **11** |
+| **Total** | **17** | **12** |
 
 ---
 
@@ -189,7 +189,7 @@ Admin explicitly grants services after reviewing the new user.
 ---
 
 ### M4 — STS error details leaked to callers
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **Files:** `backend/app/routers/requests_router.py:123,348`, `backend/app/routers/admin.py:214`
 - **Risk:** Raw `boto3` exception messages (which may contain the role ARN, account ID, and permission details) are returned directly to the client.
 
@@ -269,7 +269,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | M1 | Medium | `[x]` | `main.py:20` | CORS origin hardcoded, not env-configurable |
 | M2 | Medium | `[x]` | `routers/admin.py:151` | `update_user` allows any user as manager |
 | M3 | Medium | `[x]` | `routers/requests_router.py:191` | Auto-registered users get all services |
-| M4 | Medium | `[ ]` | `routers/requests_router.py:123` | STS errors leaked to client |
+| M4 | Medium | `[x]` | `routers/requests_router.py:123` | STS errors leaked to client |
 | M5 | Medium | `[ ]` | `docker-compose.yml:36` | `--reload` in production command |
 | M6 | Medium | `[ ]` | `docker-compose.yml:11` | Default password `changeme` |
 | M7 | Medium | `[ ]` | `docker-compose.yml:22` | Valkey unauthenticated |

@@ -1,7 +1,10 @@
 import secrets as secrets_module
 import json
+import logging
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -121,7 +124,8 @@ async def submit_request(body: SubmitRequestBody, db: Session = Depends(get_db))
                 session_name=f"dashboard-{user.email.split('@')[0]}-{access_request.id}",
             )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"STS error: {str(e)}")
+            logger.error("STS AssumeRole failed: %s", e)
+            raise HTTPException(status_code=500, detail="Failed to issue AWS credentials. Contact your admin.")
 
         _revoke_active_sessions(user.id, access_request.id, db)
 
@@ -355,7 +359,8 @@ async def approve_or_deny(body: ApprovalVerifyBody, db: Session = Depends(get_db
             session_name=f"dashboard-{req.user.email.split('@')[0]}-{req.id}",
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"STS error: {str(e)}")
+        logger.error("STS AssumeRole failed: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to issue AWS credentials. Contact your admin.")
 
     # Revoke any previously active sessions for this user
     _revoke_active_sessions(req.user_id, req.id, db)

@@ -1,5 +1,8 @@
+import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -213,7 +216,8 @@ async def admin_action(
                 session_name=f"dashboard-{req.user.email.split('@')[0]}-{req.id}",
             )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"STS error: {str(e)}")
+            logger.error("STS AssumeRole failed: %s", e)
+            raise HTTPException(status_code=500, detail="Failed to issue AWS credentials. Contact your admin.")
 
         # Revoke any previously active sessions for this user
         now = datetime.utcnow()
