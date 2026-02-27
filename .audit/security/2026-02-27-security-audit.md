@@ -13,9 +13,9 @@
 |----------|-------|-------|
 | Critical | 4 | 4 |
 | High | 4 | 4 |
-| Medium | 7 | 5 |
+| Medium | 7 | 6 |
 | Low | 2 | 0 |
-| **Total** | **17** | **13** |
+| **Total** | **17** | **14** |
 
 ---
 
@@ -212,7 +212,7 @@ except Exception as e:
 ---
 
 ### M6 — Default Postgres password falls back to `changeme`
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **File:** `docker-compose.yml:11`
 - **Risk:** If `.env` is missing or `POSTGRES_PASSWORD` is unset, the database starts with the trivial password `changeme`.
 
@@ -271,7 +271,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | M3 | Medium | `[x]` | `routers/requests_router.py:191` | Auto-registered users get all services |
 | M4 | Medium | `[x]` | `routers/requests_router.py:123` | STS errors leaked to client |
 | M5 | Medium | `[x]` | `docker-compose.yml:36` | `--reload` in production command |
-| M6 | Medium | `[ ]` | `docker-compose.yml:11` | Default password `changeme` |
+| M6 | Medium | `[x]` | `docker-compose.yml:11` | Default password `changeme` |
 | M7 | Medium | `[ ]` | `docker-compose.yml:22` | Valkey unauthenticated |
 | L1 | Low | `[ ]` | `core/config.py:28` | `SECRET_KEY` unused |
 | L2 | Low | `[ ]` | `routers/otp_auth.py:217` | Region not validated |

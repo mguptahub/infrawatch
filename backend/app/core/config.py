@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
     postgres_db: str = "awsdashboard"
     postgres_user: str = "awsdashboard"
-    postgres_password: str = "changeme"
+    postgres_password: str = ""
 
     # Valkey
     valkey_url: str = "redis://valkey:6379"
