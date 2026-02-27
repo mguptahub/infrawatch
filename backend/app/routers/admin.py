@@ -150,9 +150,11 @@ def update_user(
         else:
             manager = db.query(User).filter(
                 User.email == body.manager_email.strip().lower(),
+                User.role == UserRole.manager,
+                User.active == True,  # noqa: E712
             ).first()
             if not manager:
-                raise HTTPException(status_code=404, detail="Manager not found")
+                raise HTTPException(status_code=404, detail="Manager not found or not a manager role")
             user.manager_id = manager.id
 
     db.commit()

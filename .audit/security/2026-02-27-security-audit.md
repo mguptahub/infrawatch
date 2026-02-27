@@ -13,9 +13,9 @@
 |----------|-------|-------|
 | Critical | 4 | 4 |
 | High | 4 | 4 |
-| Medium | 7 | 1 |
+| Medium | 7 | 2 |
 | Low | 2 | 0 |
-| **Total** | **17** | **9** |
+| **Total** | **17** | **10** |
 
 ---
 
@@ -159,7 +159,7 @@ allow_origins=settings.cors_origins.split(","),
 ---
 
 ### M2 — `update_user` allows assigning any user as manager
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **File:** `backend/app/routers/admin.py:151–156`
 - **Risk:** `create_user` validates `User.role == UserRole.manager`, but the `manager_email` field in `update_user` does not — it accepts any active user regardless of role. This allows an employee to be set as another employee's manager, giving them the ability to approve that employee's AWS access requests through the email approval flow.
 
@@ -267,7 +267,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | H3 | High | `[x]` | `core/email_service.py:71,104,128` | HTML injection in email templates |
 | H4 | High | `[x]` | `core/otp_service.py:34` | No OTP attempt lockout |
 | M1 | Medium | `[x]` | `main.py:20` | CORS origin hardcoded, not env-configurable |
-| M2 | Medium | `[ ]` | `routers/admin.py:151` | `update_user` allows any user as manager |
+| M2 | Medium | `[x]` | `routers/admin.py:151` | `update_user` allows any user as manager |
 | M3 | Medium | `[ ]` | `routers/requests_router.py:191` | Auto-registered users get all services |
 | M4 | Medium | `[ ]` | `routers/requests_router.py:123` | STS errors leaked to client |
 | M5 | Medium | `[ ]` | `docker-compose.yml:36` | `--reload` in production command |
