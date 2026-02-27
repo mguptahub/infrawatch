@@ -6,6 +6,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from .core.session import session_store, SESSION_COOKIE_NAME, SESSION_TIMEOUT_MINUTES
 from .core.database import init_db
+from .core.config import settings
 from .core.limiter import limiter
 from .routers import ec2, eks, rds, cost, opensearch, mq, elasticache, secrets, ses, lb, iam
 from .routers import otp_auth, requests_router, admin
@@ -46,7 +47,7 @@ async def session_middleware(request: Request, call_next):
                 httponly=True,
                 max_age=SESSION_TIMEOUT_MINUTES * 60,
                 samesite="lax",
-                secure=False,
+                secure=settings.cookie_secure,
             )
     return response
 

@@ -4,7 +4,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # Admin — system management identity (no AWS access)
-    admin_email: str = "devops@plane.so"
+    admin_email: str = "admin@example.com"
 
     # SMTP
     smtp_host: str = "localhost"
@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     # App
     secret_key: str = "change-this-to-a-random-secret"
     frontend_url: str = "http://localhost:3000"
+    cookie_secure: bool = False  # Set to True in production (requires HTTPS)
 
     # Power AWS keys — used server-side for STS AssumeRole
     power_aws_access_key_id: Optional[str] = None

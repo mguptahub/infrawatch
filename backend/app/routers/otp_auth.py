@@ -101,7 +101,7 @@ async def verify_otp_and_login(
         })
         response.set_cookie(
             key=SESSION_COOKIE_NAME, value=session_id,
-            httponly=True, max_age=SESSION_TIMEOUT_MINUTES * 60, samesite="lax", secure=False,
+            httponly=True, max_age=SESSION_TIMEOUT_MINUTES * 60, samesite="lax", secure=settings.cookie_secure,
         )
         return {"success": True, "role": "admin", "email": email}
 
@@ -146,7 +146,7 @@ async def verify_otp_and_login(
 
     response.set_cookie(
         key=SESSION_COOKIE_NAME, value=session_id,
-        httponly=True, max_age=SESSION_TIMEOUT_MINUTES * 60, samesite="lax", secure=False,
+        httponly=True, max_age=SESSION_TIMEOUT_MINUTES * 60, samesite="lax", secure=settings.cookie_secure,
     )
 
     return {

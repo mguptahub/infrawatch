@@ -12,10 +12,10 @@
 | Severity | Count | Fixed |
 |----------|-------|-------|
 | Critical | 4 | 4 |
-| High | 4 | 0 |
+| High | 4 | 1 |
 | Medium | 7 | 0 |
 | Low | 2 | 0 |
-| **Total** | **17** | **4** |
+| **Total** | **17** | **5** |
 
 ---
 
@@ -92,7 +92,7 @@ if body.action not in ("approve", "deny"):
 ---
 
 ### H1 — `secure=False` hardcoded in session cookies
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **Files:** `backend/app/routers/otp_auth.py:100,145`, `backend/app/routers/auth.py:23`, `backend/app/main.py:41`
 - **Risk:** All `set_cookie` calls hardcode `secure=False`. If deployed behind HTTPS, cookies are still not flagged secure, allowing potential transmission over HTTP on redirects.
 
@@ -262,7 +262,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | C2 | Critical | `[x]` | `routers/auth.py`, `main.py:47` | Legacy key-auth bypasses OTP/approval |
 | C3 | Critical | `[x]` | `routers/requests_router.py:331` | Non-"deny" action defaults to approve |
 | C4 | Critical | `[x]` | `routers/otp_auth.py:37` | No rate limiting on OTP endpoints |
-| H1 | High | `[ ]` | Multiple cookie setters | `secure=False` hardcoded |
+| H1 | High | `[x]` | Multiple cookie setters | `secure=False` hardcoded |
 | H2 | High | `[ ]` | `docker-compose.yml:34` | Backend port 8000 publicly exposed |
 | H3 | High | `[ ]` | `core/email_service.py:71,104,128` | HTML injection in email templates |
 | H4 | High | `[ ]` | `core/otp_service.py:34` | No OTP attempt lockout |
