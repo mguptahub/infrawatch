@@ -39,9 +39,21 @@
   2. Exercising related frontend flow manually.
   3. Running `npm run build` (frontend) and `py_compile` (backend) before PR.
 
+## Development Workflow
+- New features follow: brainstorm → design doc (`docs/plans/YYYY-MM-DD-<topic>-design.md`) → implementation plan (`docs/plans/YYYY-MM-DD-<topic>.md`) → implementation.
+- Design docs capture the agreed approach and edge cases before any code is written.
+- Implementation plans list exact files, code snippets, and commit commands per task.
+- During implementation, review each task for spec compliance and code quality before moving on.
+
+## Database Migrations
+- There is no Alembic. Schema is created via `Base.metadata.create_all()` in `init_db()`.
+- For changes to existing tables (column type changes, new columns), add a one-time `ALTER TABLE` migration inside `init_db()` in `backend/app/core/database.py` — before the `create_all` call.
+- Wrap migration SQL in `try/except ProgrammingError: pass` so it is silently skipped on subsequent startups.
+- Log unexpected exceptions (`except Exception as e: print(...)`) so real failures are visible in container logs.
+
 ## Commit & Pull Request Guidelines
 - Follow conventional-style prefixes seen in history: `feat:`, `fix:`, `docs:`, `chore:`.
-- Keep commits scoped to one logical change.
+- Squash a feature down to **one logical commit** before pushing — use `git reset --soft origin/main` then re-commit. Fix commits applied during testing come after as separate commits.
 - PRs should include:
   - clear summary and impacted areas (`backend`, `frontend`, or both),
   - any env/config changes,
