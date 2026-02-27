@@ -27,7 +27,7 @@ export default function AdminPage() {
       <header className="dash-header">
         <div className="dash-brand">
           <span className="logo-icon">⬡</span>
-          <span className="brand-name">AWS Monitor — Admin</span>
+          <span className="brand-name">Cloud Dashboard — Admin</span>
         </div>
         <div className="dash-account">
           <span className="account-arn">{auth?.email}</span>

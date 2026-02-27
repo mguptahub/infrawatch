@@ -100,7 +100,7 @@ export default function DashboardPage() {
         <header className="dash-header">
           <div className="dash-brand">
             <span className="logo-icon">⬡</span>
-            <span className="brand-name">AWS Monitor</span>
+            <span className="brand-name">Cloud Dashboard</span>
           </div>
           <div className="dash-account">
             <button className="logout-btn" onClick={logout}>Disconnect</button>
@@ -118,7 +118,7 @@ export default function DashboardPage() {
       <header className="dash-header">
         <div className="dash-brand">
           <span className="logo-icon">⬡</span>
-          <span className="brand-name">AWS Monitor</span>
+          <span className="brand-name">Cloud Dashboard</span>
         </div>
 
         <div className="dash-account">

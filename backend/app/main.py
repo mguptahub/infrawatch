@@ -13,7 +13,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="AWS Monitor API", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="Cloud Dashboard API", version="2.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,7 +65,7 @@ app.include_router(admin.router)
 
 @app.get("/")
 async def root():
-    return {"message": "AWS Monitor API is running"}
+    return {"message": "Cloud Dashboard API is running"}
 
 
 @app.get("/api/health")

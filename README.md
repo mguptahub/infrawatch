@@ -1,4 +1,4 @@
-# AWS Monitor & Access Dashboard
+# Cloud Dashboard & Access Dashboard
 
 A central hub for monitoring AWS infrastructure and managing Just-In-Time (JIT) access. This dashboard combines real-time resource visibility with a secure request-approval workflow for temporary AWS credentials using AWS STS.
 
@@ -66,6 +66,24 @@ The dashboard itself requires an IAM profile or role with permissions to:
 - Describe the AWS resources listed above.
 - Call `sts:AssumeRole` to generate temporary credentials for users.
 - Configure an SMTP relay (for example SES SMTP, Mailgun, or internal SMTP) for OTP and approval notifications.
+
+### BASE_ROLE_ARN permissions
+
+The backend assumes `BASE_ROLE_ARN` and applies a restrictive session policy per request. The session policy can only reduce permissions, so `BASE_ROLE_ARN` must already allow the read-only actions below for the system to work.
+
+- **EC2**: `ec2:Describe*`
+- **EKS**: `eks:List*`, `eks:Describe*`
+- **RDS**: `rds:Describe*`, `rds:List*`
+- **ElastiCache**: `elasticache:Describe*`, `elasticache:List*`
+- **OpenSearch**: `es:List*`, `es:Describe*`, `es:ESHttpGet`
+- **Amazon MQ**: `mq:List*`, `mq:Describe*`
+- **SES**: `ses:Get*`, `ses:List*`, `sesv2:Get*`, `sesv2:List*`, `sesv2:DeleteSuppressedDestination`
+- **Secrets Manager**: `secretsmanager:ListSecrets`, `secretsmanager:DescribeSecret`, `secretsmanager:GetSecretValue`
+- **IAM**: `iam:ListUsers`, `iam:GetUser`, `iam:GetLoginProfile`, `iam:GenerateCredentialReport`, `iam:GetCredentialReport`, `iam:ListGroupsForUser`, `iam:ListAttachedUserPolicies`, `iam:ListUserPolicies`, `iam:ListMFADevices`, `iam:ListAccessKeys`, `iam:GetAccessKeyLastUsed`
+- **Cost Explorer**: `ce:Get*`, `ce:List*`, `ce:Describe*`
+- **ELB**: `elasticloadbalancing:Describe*`
+
+If you change service capabilities in `backend/app/core/sts_service.py`, update the base role policy to match.
 
 ## Architecture
 

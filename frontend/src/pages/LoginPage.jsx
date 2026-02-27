@@ -52,7 +52,7 @@ export default function LoginPage({ onRequestAccess }) {
       <div className="login-card">
         <div className="login-logo">
           <span className="logo-icon">⬡</span>
-          <h1>AWS Monitor</h1>
+          <h1>Cloud Dashboard</h1>
           <p>Infrastructure visibility dashboard</p>
         </div>
 

@@ -235,7 +235,7 @@ function PageShell({ children }) {
       <div className="login-card" style={{ maxWidth: 500 }}>
         <div className="login-logo" style={{ marginBottom: "1rem" }}>
           <span className="logo-icon">⬡</span>
-          <h1>AWS Monitor</h1>
+          <h1>Cloud Dashboard</h1>
         </div>
         {children}
       </div>
