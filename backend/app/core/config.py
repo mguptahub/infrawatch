@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     postgres_password: str = ""
 
     # Valkey
-    valkey_url: str = "redis://valkey:6379"
+    valkey_url: str = "redis://valkey:6379"  # Include password: redis://:password@valkey:6379
 
     # App
     secret_key: str = "change-this-to-a-random-secret"

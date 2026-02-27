@@ -13,9 +13,9 @@
 |----------|-------|-------|
 | Critical | 4 | 4 |
 | High | 4 | 4 |
-| Medium | 7 | 6 |
+| Medium | 7 | 7 |
 | Low | 2 | 0 |
-| **Total** | **17** | **14** |
+| **Total** | **17** | **15** |
 
 ---
 
@@ -224,7 +224,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 ---
 
 ### M7 — Valkey has no authentication
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **File:** `docker-compose.yml:22–26`
 - **Risk:** Valkey is unauthenticated. All session tokens and STS credentials (`access_key`, `secret_key`, `session_token`) stored in it are readable by anyone who can reach the container on the Docker network.
 
@@ -272,6 +272,6 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | M4 | Medium | `[x]` | `routers/requests_router.py:123` | STS errors leaked to client |
 | M5 | Medium | `[x]` | `docker-compose.yml:36` | `--reload` in production command |
 | M6 | Medium | `[x]` | `docker-compose.yml:11` | Default password `changeme` |
-| M7 | Medium | `[ ]` | `docker-compose.yml:22` | Valkey unauthenticated |
+| M7 | Medium | `[x]` | `docker-compose.yml:22` | Valkey unauthenticated |
 | L1 | Low | `[ ]` | `core/config.py:28` | `SECRET_KEY` unused |
 | L2 | Low | `[ ]` | `routers/otp_auth.py:217` | Region not validated |
