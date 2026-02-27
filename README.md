@@ -50,7 +50,7 @@ The dashboard implements a secure, role-based access request system to reduce lo
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd aws-dashboard
+cd cloud-dashboard
 
 # Set up environment
 cp .env.example .env
