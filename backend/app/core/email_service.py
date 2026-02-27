@@ -33,7 +33,12 @@ async def send_email(to: str, subject: str, html: str, text: str = ""):
 # ─── Email templates ──────────────────────────────────────────────────────────
 
 async def send_otp(to: str, code: str, purpose: str = "login"):
-    action = "log in to the AWS Dashboard" if purpose == "login" else "verify your identity to approve a request"
+    if purpose == "login":
+        action = "log in to the AWS Dashboard"
+    elif purpose == "approval":
+        action = "verify your identity to approve a request"
+    else:
+        action = "verify your email address"
     html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
       <h2 style="color:#1a1a2e;margin-bottom:8px">Your verification code</h2>
@@ -127,3 +132,49 @@ async def send_denial_notification(to: str, name: str, services: list, reason: s
     """
     await send_email(to, "Your AWS access request was denied", html,
                      f"Your request for {services_str} was denied. {reason}")
+
+
+async def send_new_user_notification(
+    admin_email: str,
+    new_user_email: str,
+    services: list,
+    duration_hours: int,
+    admin_url: str,
+):
+    """Notify admin that a new user auto-registered and submitted an access request."""
+    from html import escape
+    safe_email = escape(new_user_email)
+    services_str = ", ".join(s.upper() for s in services)
+    safe_services = escape(services_str)
+    safe_url = escape(admin_url)
+    html = f"""
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px">
+      <h2 style="color:#1a1a2e">New User Registered</h2>
+      <p style="color:#555"><strong>{safe_email}</strong> has self-registered via email
+         verification and submitted an access request.</p>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0">
+        <tr><td style="padding:8px;color:#999;width:140px">Email</td>
+            <td style="padding:8px;font-weight:600">{safe_email}</td></tr>
+        <tr style="background:#f9f9f9">
+            <td style="padding:8px;color:#999">Services</td>
+            <td style="padding:8px;font-weight:600">{safe_services}</td></tr>
+        <tr><td style="padding:8px;color:#999">Duration</td>
+            <td style="padding:8px;font-weight:600">{duration_hours} hour(s)</td></tr>
+      </table>
+      <a href="{safe_url}"
+         style="display:inline-block;background:#2563eb;color:#fff;padding:12px 28px;
+                border-radius:6px;text-decoration:none;font-weight:600;margin-top:8px">
+        Review in Admin Panel
+      </a>
+      <p style="color:#999;font-size:12px;margin-top:24px">
+        You can approve the request and configure the user's settings from the admin panel.
+      </p>
+    </div>
+    """
+    await send_email(
+        admin_email,
+        f"New user registered: {new_user_email}",
+        html,
+        f"{new_user_email} auto-registered and is requesting {services_str} for {duration_hours}h. "
+        f"Review: {admin_url}",
+    )

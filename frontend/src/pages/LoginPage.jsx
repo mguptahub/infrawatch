@@ -23,7 +23,8 @@ export default function LoginPage({ onRequestAccess }) {
         setError(null);
         onRequestAccess(email.trim().toLowerCase());
       } else if (err.message === "not_registered") {
-        setError("This email is not registered. Contact your admin to get access.");
+        setError(null);
+        onRequestAccess(email.trim().toLowerCase());
       } else {
         setError(err.message);
       }
@@ -113,7 +114,7 @@ export default function LoginPage({ onRequestAccess }) {
         )}
 
         <p className="login-footer">
-          Access is granted by your manager. Contact admin if you need access.
+          Don't have access? Use the Request Access button below.
         </p>
       </div>
     </div>

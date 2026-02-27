@@ -21,6 +21,13 @@ export default function RequestPage({ initialEmail = "", onBack }) {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState(null);
 
+  const [regStage, setRegStage] = useState(null); // null | "verify"
+  const [regOtp, setRegOtp] = useState("");
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState(null);
+  const [pendingServices, setPendingServices] = useState([]);
+  const [pendingDuration, setPendingDuration] = useState(4);
+
   function toggleService(s) {
     setServices((prev) =>
       prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
@@ -35,12 +42,37 @@ export default function RequestPage({ initialEmail = "", onBack }) {
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const result = await api.submitRequest(normalizedEmail, services, duration);
-      setEmail(normalizedEmail);
-      setSubmission(result);
+      if (result.status === "verification_required") {
+        setEmail(normalizedEmail);
+        setPendingServices(services);
+        setPendingDuration(duration);
+        setRegStage("verify");
+      } else {
+        setEmail(normalizedEmail);
+        setSubmission(result);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleVerifyRegistration(e) {
+    e.preventDefault();
+    setRegLoading(true);
+    setRegError(null);
+    try {
+      const result = await api.verifyAndSubmitRequest(
+        email, regOtp.trim(), pendingServices, pendingDuration
+      );
+      setRegStage(null);
+      setSubmission(result);
+    } catch (err) {
+      setRegError(err.message);
+      setRegOtp("");
+    } finally {
+      setRegLoading(false);
     }
   }
 
@@ -69,6 +101,50 @@ export default function RequestPage({ initialEmail = "", onBack }) {
     } finally {
       setOtpLoading(false);
     }
+  }
+
+  if (regStage === "verify") {
+    return (
+      <div className="login-page">
+        <div className="login-card">
+          <div className="login-logo">
+            <span className="logo-icon">⬡</span>
+            <h1>Verify Your Email</h1>
+            <p>We sent a 6-digit code to confirm your address.</p>
+          </div>
+          <form onSubmit={handleVerifyRegistration} className="login-form">
+            <p className="otp-hint">
+              Check your inbox at <strong>{email}</strong>
+            </p>
+            <div className="field">
+              <label>Verification Code</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="000000"
+                value={regOtp}
+                onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="otp-input"
+                autoFocus
+                required
+              />
+            </div>
+            {regError && <div className="login-error">{regError}</div>}
+            <button type="submit" className="login-btn" disabled={regLoading || regOtp.length !== 6}>
+              {regLoading ? "Verifying…" : "Confirm & Submit Request"}
+            </button>
+            <button
+              type="button"
+              className="login-secondary-btn"
+              onClick={() => { setRegStage(null); setRegOtp(""); setRegError(null); }}
+            >
+              ← Back
+            </button>
+          </form>
+          <p className="login-footer">Code expires in 10 minutes.</p>
+        </div>
+      </div>
+    );
   }
 
   if (submission) {

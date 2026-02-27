@@ -25,6 +25,7 @@ class RequestStatus(str, enum.Enum):
 class OTPPurpose(str, enum.Enum):
     login = "login"
     approval = "approval"
+    registration = "registration"
 
 
 class User(Base):
@@ -85,7 +86,7 @@ class OTPCode(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, nullable=False, index=True)
     code = Column(String(6), nullable=False)
-    purpose = Column(SAEnum(OTPPurpose), nullable=False)
+    purpose = Column(String(20), nullable=False)
     used = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)

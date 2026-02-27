@@ -34,12 +34,27 @@ class Settings(BaseSettings):
     power_aws_region: str = "us-east-1"
     base_role_arn: Optional[str] = None
 
+    # Auto-registration — comma-separated domains, e.g. "plane.so,contractor.com"
+    # Leave empty to disable auto-registration entirely
+    allowed_domains: str = ""
+
     @property
     def database_url(self) -> str:
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
+
+    def is_domain_allowed(self, email: str) -> bool:
+        """Return True if the email's domain is in the ALLOWED_DOMAINS whitelist."""
+        if not self.allowed_domains.strip():
+            return False
+        parts = email.split("@")
+        if len(parts) != 2 or not parts[1]:
+            return False
+        domain = parts[1].lower()
+        allowed = {d.strip().lower() for d in self.allowed_domains.split(",") if d.strip()}
+        return domain in allowed
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

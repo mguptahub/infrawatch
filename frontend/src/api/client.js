@@ -37,6 +37,11 @@ export const api = {
   // ─── Access requests ───────────────────────────────────────────────────────
   submitRequest: (email, services, duration_hours) =>
     req("/api/requests", { method: "POST", body: JSON.stringify({ email, services, duration_hours }) }),
+  verifyAndSubmitRequest: (email, otp_code, services, duration_hours) =>
+    req("/api/requests/verify", {
+      method: "POST",
+      body: JSON.stringify({ email, otp_code, services, duration_hours }),
+    }),
   getApprovalRequest: (token) => req(`/api/requests/approve/${token}`),
   sendApprovalOTP:    (token, email) =>
     req("/api/requests/approve/otp", { method: "POST", body: JSON.stringify({ token, email }) }),

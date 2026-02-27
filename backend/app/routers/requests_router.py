@@ -11,11 +11,12 @@ from ..core.otp_service import create_otp, verify_otp
 from ..core.email_service import (
     send_manager_notification, send_otp,
     send_approval_confirmation, send_denial_notification,
+    send_new_user_notification,
 )
-from ..core.sts_service import assume_role_for_services
+from ..core.sts_service import assume_role_for_services, ALL_SERVICES
 from ..core.valkey_client import get_client as get_valkey
 from ..db.models import (
-    User, AccessRequest, ApprovalToken, RequestStatus, OTPPurpose,
+    User, AccessRequest, ApprovalToken, RequestStatus, OTPPurpose, UserRole,
 )
 
 router = APIRouter(prefix="/api/requests", tags=["Requests"])
@@ -59,6 +60,13 @@ class OTPForApprovalBody(BaseModel):
     email: str          # manager's email
 
 
+class VerifyAndSubmitBody(BaseModel):
+    email: str
+    otp_code: str
+    services: list[str]
+    duration_hours: int
+
+
 # ─── Submit request ───────────────────────────────────────────────────────────
 
 @router.post("")
@@ -66,6 +74,11 @@ async def submit_request(body: SubmitRequestBody, db: Session = Depends(get_db))
     email = body.email.strip().lower()
     user = db.query(User).filter(User.email == email, User.active == True).first()  # noqa: E712
     if not user:
+        if settings.is_domain_allowed(email):
+            # Unknown email with a whitelisted domain — send registration OTP
+            code = create_otp(db, email, OTPPurpose.registration)
+            await send_otp(email, code, purpose="registration")
+            return {"status": "verification_required"}
         raise HTTPException(status_code=404, detail="Email not registered. Contact your admin.")
 
     # Validate requested services against user's allowlist
@@ -147,6 +160,93 @@ async def submit_request(body: SubmitRequestBody, db: Session = Depends(get_db))
     )
 
     return {"success": True, "auto_approved": False, "message": "Request submitted. Your manager has been notified."}
+
+
+# ─── Verify registration OTP and complete request submission ─────────────────
+
+@router.post("/verify")
+async def verify_and_submit(body: VerifyAndSubmitBody, db: Session = Depends(get_db)):
+    """
+    For new users: verify the registration OTP, create the user account,
+    and submit their access request to the admin for approval.
+    """
+    email = body.email.strip().lower()
+
+    if not settings.is_domain_allowed(email):
+        raise HTTPException(status_code=403, detail="Email domain not whitelisted for auto-registration")
+
+    if not verify_otp(db, email, body.otp_code, OTPPurpose.registration):
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+
+    # Race condition guard: user may have been created between OTP send and verify
+    user = db.query(User).filter(User.email == email, User.active == True).first()  # noqa: E712
+    if not user:
+        # Derive a display name from the email local part (e.g. "john.doe" → "John Doe")
+        local = email.split("@")[0]
+        name = " ".join(part.capitalize() for part in local.replace(".", " ").replace("_", " ").split())
+        user = User(
+            email=email,
+            name=name,
+            role=UserRole.employee,
+            allowed_services=list(ALL_SERVICES),
+            max_duration_hours=12,
+            auto_approve=False,
+            active=True,
+        )
+        db.add(user)
+        db.flush()  # get user.id without committing
+
+    # Validate services and duration
+    invalid = [s for s in body.services if s not in user.allowed_services]
+    if invalid:
+        raise HTTPException(status_code=400, detail=f"Services not allowed: {', '.join(invalid)}")
+
+    if body.duration_hours < 1 or body.duration_hours > user.max_duration_hours:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Duration must be between 1 and {user.max_duration_hours} hours",
+        )
+
+    # Cancel any previous pending requests
+    db.query(AccessRequest).filter(
+        AccessRequest.user_id == user.id,
+        AccessRequest.status == RequestStatus.pending,
+    ).update({"status": RequestStatus.denied, "denial_reason": "Superseded by a new request"})
+
+    # Create access request
+    access_request = AccessRequest(
+        user_id=user.id,
+        services=body.services,
+        duration_hours=body.duration_hours,
+    )
+    db.add(access_request)
+    db.flush()
+
+    # Create approval token for admin
+    token_value = secrets_module.token_urlsafe(32)
+    approval_token = ApprovalToken(
+        request_id=access_request.id,
+        token=token_value,
+        expires_at=datetime.utcnow() + timedelta(hours=APPROVAL_TOKEN_EXPIRY_HOURS),
+    )
+    db.add(approval_token)
+    db.commit()
+
+    # Notify admin (new users have no manager — always goes to admin)
+    # Email failure is non-fatal: request is already committed; admin can find it via admin panel
+    admin_url = f"{settings.frontend_url}/"
+    try:
+        await send_new_user_notification(
+            admin_email=settings.admin_email,
+            new_user_email=email,
+            services=body.services,
+            duration_hours=body.duration_hours,
+            admin_url=admin_url,
+        )
+    except Exception as e:
+        print(f"Admin notification email failed for new user {email}: {e}")
+
+    return {"success": True, "message": "Request submitted. Admin will review your request."}
 
 
 # ─── Get request details from approval token (for the approval page) ──────────
