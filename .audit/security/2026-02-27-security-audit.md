@@ -13,9 +13,9 @@
 |----------|-------|-------|
 | Critical | 4 | 4 |
 | High | 4 | 4 |
-| Medium | 7 | 0 |
+| Medium | 7 | 1 |
 | Low | 2 | 0 |
-| **Total** | **17** | **8** |
+| **Total** | **17** | **9** |
 
 ---
 
@@ -143,7 +143,7 @@ A malicious name or denial reason can inject arbitrary HTML into the rendered em
 ---
 
 ### M1 — CORS origin hardcoded to `localhost:3000`
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **File:** `backend/app/main.py:20`
 - **Risk:** Not configurable via environment variable. In production with a real domain this either silently blocks requests, or someone changes it to `["*"]` as a quick fix.
 
@@ -266,7 +266,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | H2 | High | `[x]` | `docker-compose.yml:34` | Backend port 8000 publicly exposed |
 | H3 | High | `[x]` | `core/email_service.py:71,104,128` | HTML injection in email templates |
 | H4 | High | `[x]` | `core/otp_service.py:34` | No OTP attempt lockout |
-| M1 | Medium | `[ ]` | `main.py:20` | CORS origin hardcoded, not env-configurable |
+| M1 | Medium | `[x]` | `main.py:20` | CORS origin hardcoded, not env-configurable |
 | M2 | Medium | `[ ]` | `routers/admin.py:151` | `update_user` allows any user as manager |
 | M3 | Medium | `[ ]` | `routers/requests_router.py:191` | Auto-registered users get all services |
 | M4 | Medium | `[ ]` | `routers/requests_router.py:123` | STS errors leaked to client |
