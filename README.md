@@ -82,6 +82,7 @@ The backend assumes `BASE_ROLE_ARN` and applies a restrictive session policy per
 - **IAM**: `iam:ListUsers`, `iam:GetUser`, `iam:GetLoginProfile`, `iam:GenerateCredentialReport`, `iam:GetCredentialReport`, `iam:ListGroupsForUser`, `iam:ListAttachedUserPolicies`, `iam:ListUserPolicies`, `iam:ListMFADevices`, `iam:ListAccessKeys`, `iam:GetAccessKeyLastUsed`
 - **Cost Explorer**: `ce:Get*`, `ce:List*`, `ce:Describe*`
 - **ELB**: `elasticloadbalancing:Describe*`
+- **CloudWatch** (required for all metrics panels): `cloudwatch:GetMetricData`, `cloudwatch:GetMetricStatistics`, `cloudwatch:ListMetrics`
 
 If you change service capabilities in `backend/app/core/sts_service.py`, update the base role policy to match.
 
