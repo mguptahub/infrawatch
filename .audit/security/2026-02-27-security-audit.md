@@ -11,11 +11,11 @@
 
 | Severity | Count | Fixed |
 |----------|-------|-------|
-| Critical | 4 | 1 |
+| Critical | 4 | 2 |
 | High | 4 | 0 |
 | Medium | 7 | 0 |
 | Low | 2 | 0 |
-| **Total** | **17** | **1** |
+| **Total** | **17** | **2** |
 
 ---
 
@@ -44,7 +44,7 @@ def generate_otp() -> str:
 ---
 
 ### C2 — Legacy auth router bypasses entire OTP/approval flow
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **Files:** `backend/app/routers/auth.py`, `backend/app/main.py:47`
 - **Risk:** `POST /api/auth/verify` accepts raw AWS `access_key` + `secret_key` directly in the request body and creates a valid session. Any user who knows AWS credentials can log in without OTP verification, manager approval, or any access control check. Completely nullifies the Phase 2 auth system.
 
@@ -259,7 +259,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | ID | Severity | Status | File | Description |
 |----|----------|--------|------|-------------|
 | C1 | Critical | `[x]` | `core/otp_service.py:11` | Non-CSPRNG used for OTP generation |
-| C2 | Critical | `[ ]` | `routers/auth.py`, `main.py:47` | Legacy key-auth bypasses OTP/approval |
+| C2 | Critical | `[x]` | `routers/auth.py`, `main.py:47` | Legacy key-auth bypasses OTP/approval |
 | C3 | Critical | `[ ]` | `routers/requests_router.py:331` | Non-"deny" action defaults to approve |
 | C4 | Critical | `[ ]` | `routers/otp_auth.py:37` | No rate limiting on OTP endpoints |
 | H1 | High | `[ ]` | Multiple cookie setters | `secure=False` hardcoded |

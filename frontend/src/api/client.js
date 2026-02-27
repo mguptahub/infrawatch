@@ -21,10 +21,6 @@ function withForce(path, force) {
 }
 
 export const api = {
-  // ─── Legacy access-key auth (kept during transition) ───────────────────────
-  verifyAuth: (config) =>
-    req("/api/auth/verify", { method: "POST", body: JSON.stringify(config) }),
-
   // ─── OTP auth ──────────────────────────────────────────────────────────────
   requestOTP:  (email) =>
     req("/api/otp/request", { method: "POST", body: JSON.stringify({ email }) }),
@@ -94,6 +90,6 @@ export const api = {
   getLBDetail:    (id) => req(`/api/lb/${encodeURIComponent(id)}`),
   getLBMetrics:   (id, hours = 24) => req(`/api/lb/${encodeURIComponent(id)}/metrics?hours=${hours}`),
 
-  logout:  () => req("/api/auth/logout", { method: "POST" }),
+  logout:  () => req("/api/otp/terminate", { method: "POST" }),
   health:  () => req("/api/health"),
 };
