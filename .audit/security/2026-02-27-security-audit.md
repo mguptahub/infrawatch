@@ -175,16 +175,13 @@ manager = db.query(User).filter(
 ---
 
 ### M3 — Auto-registered users get all services with 12h max duration
-- **Status:** `[x]` Fixed
+- **Status:** `[x]` Fixed → Reverted
 - **File:** `backend/app/routers/requests_router.py:191–194`
 - **Risk:** New users who self-register via the domain whitelist are granted `ALL_SERVICES` and `max_duration_hours=12` by default. While admin approval is still required, this is maximally permissive by default.
 
-**Fix:** Start with an empty allowlist:
-```python
-allowed_services=[],
-max_duration_hours=1,
-```
-Admin explicitly grants services after reviewing the new user.
+**Original fix attempted:** Start with `allowed_services=[]`, `max_duration_hours=1`.
+
+**Reverted:** The restrictive defaults required a `is_new_user` bypass (skip allowlist for users with empty allowlist) to allow the first request to be submitted at all, creating an inconsistency where the user record showed constraints that were never actually enforced. Security in this system comes from admin approval of every request, not from the default allowlist — a permissive default + real admin approval is safer in practice than a restrictive default + bypass. Defaults restored to `allowed_services=list(ALL_SERVICES)`, `max_duration_hours=12`; admin can tighten per-user after onboarding.
 
 ---
 
