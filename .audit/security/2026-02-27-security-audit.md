@@ -13,9 +13,9 @@
 |----------|-------|-------|
 | Critical | 4 | 4 |
 | High | 4 | 4 |
-| Medium | 7 | 2 |
+| Medium | 7 | 3 |
 | Low | 2 | 0 |
-| **Total** | **17** | **10** |
+| **Total** | **17** | **11** |
 
 ---
 
@@ -175,7 +175,7 @@ manager = db.query(User).filter(
 ---
 
 ### M3 — Auto-registered users get all services with 12h max duration
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **File:** `backend/app/routers/requests_router.py:191–194`
 - **Risk:** New users who self-register via the domain whitelist are granted `ALL_SERVICES` and `max_duration_hours=12` by default. While admin approval is still required, this is maximally permissive by default.
 
@@ -268,7 +268,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | H4 | High | `[x]` | `core/otp_service.py:34` | No OTP attempt lockout |
 | M1 | Medium | `[x]` | `main.py:20` | CORS origin hardcoded, not env-configurable |
 | M2 | Medium | `[x]` | `routers/admin.py:151` | `update_user` allows any user as manager |
-| M3 | Medium | `[ ]` | `routers/requests_router.py:191` | Auto-registered users get all services |
+| M3 | Medium | `[x]` | `routers/requests_router.py:191` | Auto-registered users get all services |
 | M4 | Medium | `[ ]` | `routers/requests_router.py:123` | STS errors leaked to client |
 | M5 | Medium | `[ ]` | `docker-compose.yml:36` | `--reload` in production command |
 | M6 | Medium | `[ ]` | `docker-compose.yml:11` | Default password `changeme` |

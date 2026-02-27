@@ -189,24 +189,29 @@ async def verify_and_submit(body: VerifyAndSubmitBody, db: Session = Depends(get
             email=email,
             name=name,
             role=UserRole.employee,
-            allowed_services=list(ALL_SERVICES),
-            max_duration_hours=12,
+            allowed_services=[],
+            max_duration_hours=1,
             auto_approve=False,
             active=True,
         )
         db.add(user)
         db.flush()  # get user.id without committing
 
-    # Validate services and duration
-    invalid = [s for s in body.services if s not in user.allowed_services]
-    if invalid:
-        raise HTTPException(status_code=400, detail=f"Services not allowed: {', '.join(invalid)}")
+    # For brand-new auto-registered users the admin sets services during approval —
+    # skip the allowlist check. For existing users, enforce it normally.
+    is_new_user = not user.allowed_services
+    if not is_new_user:
+        invalid = [s for s in body.services if s not in user.allowed_services]
+        if invalid:
+            raise HTTPException(status_code=400, detail=f"Services not allowed: {', '.join(invalid)}")
 
-    if body.duration_hours < 1 or body.duration_hours > user.max_duration_hours:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Duration must be between 1 and {user.max_duration_hours} hours",
-        )
+    # Validate requested services are known
+    unknown = [s for s in body.services if s not in ALL_SERVICES]
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown services: {', '.join(unknown)}")
+
+    if body.duration_hours < 1 or body.duration_hours > 12:
+        raise HTTPException(status_code=400, detail="Duration must be between 1 and 12 hours")
 
     # Cancel any previous pending requests
     db.query(AccessRequest).filter(
