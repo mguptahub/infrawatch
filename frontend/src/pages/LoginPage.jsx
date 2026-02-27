@@ -73,13 +73,6 @@ export default function LoginPage({ onRequestAccess }) {
             <button type="submit" className="login-btn" disabled={loading || !email.trim()}>
               {loading ? "Sending code…" : "Continue"}
             </button>
-            <button
-              type="button"
-              className="login-secondary-btn"
-              onClick={() => onRequestAccess("")}
-            >
-              Request Access
-            </button>
           </form>
         ) : (
           <form onSubmit={handleOTPSubmit} className="login-form">
@@ -114,7 +107,7 @@ export default function LoginPage({ onRequestAccess }) {
         )}
 
         <p className="login-footer">
-          Don't have access? Use the Request Access button below.
+          No account? Enter your work email to request access.
         </p>
       </div>
     </div>
