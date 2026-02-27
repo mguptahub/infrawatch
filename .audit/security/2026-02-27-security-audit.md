@@ -12,10 +12,10 @@
 | Severity | Count | Fixed |
 |----------|-------|-------|
 | Critical | 4 | 4 |
-| High | 4 | 2 |
+| High | 4 | 3 |
 | Medium | 7 | 0 |
 | Low | 2 | 0 |
-| **Total** | **17** | **6** |
+| **Total** | **17** | **7** |
 
 ---
 
@@ -116,7 +116,7 @@ ports:
 ---
 
 ### H3 — HTML injection in email templates
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **File:** `backend/app/core/email_service.py:71,104,127–128`
 - **Risk:** User-controlled values are interpolated raw into HTML email bodies. Only `send_new_user_notification` correctly uses `html.escape()`. The others don't:
   - `send_manager_notification:71` — `requester_name` (from DB, originally user-supplied)
@@ -264,7 +264,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | C4 | Critical | `[x]` | `routers/otp_auth.py:37` | No rate limiting on OTP endpoints |
 | H1 | High | `[x]` | Multiple cookie setters | `secure=False` hardcoded |
 | H2 | High | `[x]` | `docker-compose.yml:34` | Backend port 8000 publicly exposed |
-| H3 | High | `[ ]` | `core/email_service.py:71,104,128` | HTML injection in email templates |
+| H3 | High | `[x]` | `core/email_service.py:71,104,128` | HTML injection in email templates |
 | H4 | High | `[ ]` | `core/otp_service.py:34` | No OTP attempt lockout |
 | M1 | Medium | `[ ]` | `main.py:20` | CORS origin hardcoded, not env-configurable |
 | M2 | Medium | `[ ]` | `routers/admin.py:151` | `update_user` allows any user as manager |

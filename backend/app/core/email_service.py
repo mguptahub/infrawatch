@@ -2,6 +2,7 @@ import smtplib
 import asyncio
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from html import escape
 from .config import settings
 
 
@@ -64,19 +65,23 @@ async def send_manager_notification(
     approval_link: str,
 ):
     services_str = ", ".join(s.upper() for s in services)
+    safe_name = escape(requester_name)
+    safe_email = escape(requester_email)
+    safe_services = escape(services_str)
+    safe_link = escape(approval_link)
     html = f"""
     <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px">
       <h2 style="color:#1a1a2e">New Access Request</h2>
-      <p style="color:#555"><strong>{requester_name}</strong> ({requester_email}) has requested
+      <p style="color:#555"><strong>{safe_name}</strong> ({safe_email}) has requested
          temporary AWS access.</p>
       <table style="width:100%;border-collapse:collapse;margin:20px 0">
         <tr><td style="padding:8px;color:#999;width:140px">Services</td>
-            <td style="padding:8px;font-weight:600">{services_str}</td></tr>
+            <td style="padding:8px;font-weight:600">{safe_services}</td></tr>
         <tr style="background:#f9f9f9">
             <td style="padding:8px;color:#999">Duration</td>
             <td style="padding:8px;font-weight:600">{duration_hours} hour(s)</td></tr>
       </table>
-      <a href="{approval_link}"
+      <a href="{safe_link}"
          style="display:inline-block;background:#2563eb;color:#fff;padding:12px 28px;
                 border-radius:6px;text-decoration:none;font-weight:600;margin-top:8px">
         Review Request
@@ -96,18 +101,21 @@ async def send_manager_notification(
 
 async def send_approval_confirmation(to: str, name: str, services: list, duration_hours: int, login_url: str):
     services_str = ", ".join(s.upper() for s in services)
+    safe_name = escape(name)
+    safe_services = escape(services_str)
+    safe_url = escape(login_url)
     html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
       <h2 style="color:#16a34a">Access Approved ✓</h2>
-      <p style="color:#555">Hi {name}, your access request has been approved.</p>
+      <p style="color:#555">Hi {safe_name}, your access request has been approved.</p>
       <table style="width:100%;border-collapse:collapse;margin:20px 0">
         <tr><td style="padding:8px;color:#999;width:140px">Services</td>
-            <td style="padding:8px;font-weight:600">{services_str}</td></tr>
+            <td style="padding:8px;font-weight:600">{safe_services}</td></tr>
         <tr style="background:#f9f9f9">
             <td style="padding:8px;color:#999">Duration</td>
             <td style="padding:8px;font-weight:600">{duration_hours} hour(s)</td></tr>
       </table>
-      <a href="{login_url}"
+      <a href="{safe_url}"
          style="display:inline-block;background:#16a34a;color:#fff;padding:12px 28px;
                 border-radius:6px;text-decoration:none;font-weight:600;margin-top:8px">
         Log In Now
@@ -120,11 +128,13 @@ async def send_approval_confirmation(to: str, name: str, services: list, duratio
 
 async def send_denial_notification(to: str, name: str, services: list, reason: str = ""):
     services_str = ", ".join(s.upper() for s in services)
-    reason_block = f"<p style='color:#555'><strong>Reason:</strong> {reason}</p>" if reason else ""
+    safe_name = escape(name)
+    safe_services = escape(services_str)
+    reason_block = f"<p style='color:#555'><strong>Reason:</strong> {escape(reason)}</p>" if reason else ""
     html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
       <h2 style="color:#dc2626">Access Request Denied</h2>
-      <p style="color:#555">Hi {name}, your request for access to <strong>{services_str}</strong>
+      <p style="color:#555">Hi {safe_name}, your request for access to <strong>{safe_services}</strong>
          has been denied.</p>
       {reason_block}
       <p style="color:#999;font-size:13px">Please contact your manager if you have questions.</p>
