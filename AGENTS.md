@@ -51,6 +51,9 @@
 - Wrap migration SQL in `try/except ProgrammingError: pass` so it is silently skipped on subsequent startups.
 - Log unexpected exceptions (`except Exception as e: print(...)`) so real failures are visible in container logs.
 
+## Push Policy
+- **Never push to any branch without explicit confirmation from the user.** Always present the push as an option and wait for approval before running `git push`.
+
 ## Commit & Pull Request Guidelines
 - Follow conventional-style prefixes seen in history: `feat:`, `fix:`, `docs:`, `chore:`.
 - Squash a feature down to **one logical commit** before pushing — use `git reset --soft origin/main` then re-commit. Fix commits applied during testing come after as separate commits.
