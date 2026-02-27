@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark" data-theme-mode="auto">
+<html lang="en" data-theme="dark" data-theme-mode="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1376,7 +1376,7 @@ volumes:
 
   <script>
     const root = document.documentElement;
-    const storageKey = "aws-dashboard-theme";
+    const storageKey = "cloud-dashboard-theme";
     const themeMeta = document.querySelector('meta[name="theme-color"]');
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -1404,7 +1404,7 @@ volumes:
     };
 
     const initTheme = () => {
-      const savedTheme = localStorage.getItem(storageKey) || "auto";
+      const savedTheme = localStorage.getItem(storageKey) || "dark";
       applyTheme(savedTheme);
     };
 
