@@ -10,7 +10,7 @@
   - `src/pages/`: top-level routes/screens.
   - `src/components/`: service panels and shared UI blocks.
   - `src/api/client.js`: all HTTP calls.
-- `docs/`: planning/design notes.
+- `.plans/`: planning/design notes (hidden from GitHub Pages).
 - Root: `docker-compose.yml`, `.env.example`, `README.md`.
 
 ## Build, Test, and Development Commands
@@ -40,7 +40,7 @@
   3. Running `npm run build` (frontend) and `py_compile` (backend) before PR.
 
 ## Development Workflow
-- New features follow: brainstorm → design doc (`docs/plans/YYYY-MM-DD-<topic>-design.md`) → implementation plan (`docs/plans/YYYY-MM-DD-<topic>.md`) → implementation.
+- New features follow: brainstorm → design doc (`.plans/YYYY-MM-DD-<topic>-design.md`) → implementation plan (`.plans/YYYY-MM-DD-<topic>.md`) → implementation.
 - Design docs capture the agreed approach and edge cases before any code is written.
 - Implementation plans list exact files, code snippets, and commit commands per task.
 - During implementation, review each task for spec compliance and code quality before moving on.
