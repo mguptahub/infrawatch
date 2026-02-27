@@ -31,6 +31,7 @@ export const api = {
   switchRegion:     (region) => req("/api/otp/region", { method: "PUT", body: JSON.stringify({ region }) }),
 
   // ─── Access requests ───────────────────────────────────────────────────────
+  getRequestConfig: (email) => req(`/api/requests/config?email=${encodeURIComponent(email)}`),
   submitRequest: (email, services, duration_hours) =>
     req("/api/requests", { method: "POST", body: JSON.stringify({ email, services, duration_hours }) }),
   verifyAndSubmitRequest: (email, otp_code, services, duration_hours) =>

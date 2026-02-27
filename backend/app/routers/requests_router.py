@@ -71,6 +71,33 @@ class VerifyAndSubmitBody(BaseModel):
     duration_hours: int
 
 
+# ─── Request form config (allowed services + max duration for an email) ───────
+
+@router.get("/config")
+def get_request_config(email: str, db: Session = Depends(get_db)):
+    """
+    Returns the services and max duration a user is allowed to request.
+    Used by the frontend to filter the request form before submission.
+
+    - Known active user  → their allowlist + max_duration_hours
+    - Whitelisted domain → ALL_SERVICES + 12h (they'll register on submit)
+    - Unknown            → 404
+    """
+    email = email.strip().lower()
+    user = db.query(User).filter(User.email == email, User.active == True).first()  # noqa: E712
+    if user:
+        return {
+            "allowed_services": user.allowed_services,
+            "max_duration_hours": user.max_duration_hours,
+        }
+    if settings.is_domain_allowed(email):
+        return {
+            "allowed_services": list(ALL_SERVICES),
+            "max_duration_hours": 12,
+        }
+    raise HTTPException(status_code=404, detail="Email not registered. Contact your admin.")
+
+
 # ─── Submit request ───────────────────────────────────────────────────────────
 
 @router.post("")

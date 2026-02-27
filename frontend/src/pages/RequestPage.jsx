@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../hooks/useAuth";
 
@@ -21,12 +21,37 @@ export default function RequestPage({ initialEmail = "", onBack }) {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState(null);
 
+  // Allowed services + max duration fetched from backend once email is entered
+  const [allowedServices, setAllowedServices] = useState(null); // null = not yet fetched
+  const [maxDuration, setMaxDuration] = useState(12);
+  const configEmailRef = useRef(""); // tracks which email was last fetched
+
   const [regStage, setRegStage] = useState(null); // null | "verify"
   const [regOtp, setRegOtp] = useState("");
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState(null);
   const [pendingServices, setPendingServices] = useState([]);
   const [pendingDuration, setPendingDuration] = useState(4);
+
+  async function fetchConfig(rawEmail) {
+    const trimmed = rawEmail.trim().toLowerCase();
+    if (!trimmed || trimmed === configEmailRef.current) return;
+    configEmailRef.current = trimmed;
+    try {
+      const cfg = await api.getRequestConfig(trimmed);
+      setAllowedServices(cfg.allowed_services);
+      setMaxDuration(cfg.max_duration_hours);
+      // Drop any already-selected services that are no longer allowed
+      setServices((prev) => prev.filter((s) => cfg.allowed_services.includes(s)));
+      // Drop duration if it now exceeds the new max
+      setDuration((prev) => (prev <= cfg.max_duration_hours ? prev : 1));
+    } catch {
+      // Unknown email — clear constraints so the form stays usable;
+      // the submit call will return the proper error.
+      setAllowedServices(null);
+      setMaxDuration(12);
+    }
+  }
 
   function toggleService(s) {
     setServices((prev) =>
@@ -225,7 +250,11 @@ export default function RequestPage({ initialEmail = "", onBack }) {
               type="email"
               placeholder="you@company.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                configEmailRef.current = ""; // invalidate cache so blur re-fetches
+              }}
+              onBlur={(e) => fetchConfig(e.target.value)}
               required
             />
           </div>
@@ -233,24 +262,26 @@ export default function RequestPage({ initialEmail = "", onBack }) {
           <div className="field">
             <label>Services Required</label>
             <div className="service-grid">
-              {Object.entries(SERVICE_LABELS).map(([key, label]) => (
-                <label key={key} className={`service-chip ${services.includes(key) ? "selected" : ""}`}>
-                  <input
-                    type="checkbox"
-                    checked={services.includes(key)}
-                    onChange={() => toggleService(key)}
-                    style={{ display: "none" }}
-                  />
-                  {label}
-                </label>
-              ))}
+              {Object.entries(SERVICE_LABELS)
+                .filter(([key]) => !allowedServices || allowedServices.includes(key))
+                .map(([key, label]) => (
+                  <label key={key} className={`service-chip ${services.includes(key) ? "selected" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={services.includes(key)}
+                      onChange={() => toggleService(key)}
+                      style={{ display: "none" }}
+                    />
+                    {label}
+                  </label>
+                ))}
             </div>
           </div>
 
           <div className="field">
             <label>Duration (hours)</label>
             <div className="duration-row">
-              {[1, 2, 4, 8].map((h) => (
+              {[1, 2, 4, 8].filter((h) => h <= maxDuration).map((h) => (
                 <button
                   key={h}
                   type="button"
