@@ -29,7 +29,7 @@ export default function RequestPage({ initialEmail = "", onBack }) {
   // Auto-fetch config when the page opens with a prefilled email (redirect from login)
   useEffect(() => {
     if (initialEmail) fetchConfig(initialEmail);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line
 
   const [regStage, setRegStage] = useState(null); // null | "verify"
   const [regOtp, setRegOtp] = useState("");
