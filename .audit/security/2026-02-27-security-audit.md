@@ -14,8 +14,8 @@
 | Critical | 4 | 4 |
 | High | 4 | 4 |
 | Medium | 7 | 7 |
-| Low | 2 | 1 |
-| **Total** | **17** | **16** |
+| Low | 2 | 2 |
+| **Total** | **17** | **17** |
 
 ---
 
@@ -246,7 +246,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 ---
 
 ### L2 — Region value not validated against known AWS regions
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **File:** `backend/app/routers/otp_auth.py:217–222`
 - **Risk:** `PUT /api/otp/region` accepts any non-empty string as a region and stores it in the session without validation. Downstream boto3 calls use this value for all AWS API calls.
 
@@ -274,4 +274,4 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | M6 | Medium | `[x]` | `docker-compose.yml:11` | Default password `changeme` |
 | M7 | Medium | `[x]` | `docker-compose.yml:22` | Valkey unauthenticated |
 | L1 | Low | `[x]` | `core/config.py:28` | `SECRET_KEY` unused |
-| L2 | Low | `[ ]` | `routers/otp_auth.py:217` | Region not validated |
+| L2 | Low | `[x]` | `routers/otp_auth.py:217` | Region not validated |

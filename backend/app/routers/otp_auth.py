@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from ..core.database import get_db
-from ..core.config import settings
+from ..core.config import settings, AWS_REGIONS
 from ..core.limiter import limiter
 from ..core.otp_service import create_otp, verify_otp
 from ..core.email_service import send_otp
@@ -218,9 +218,9 @@ def switch_region(body: SwitchRegionBody, request: Request):
     if not config:
         raise HTTPException(status_code=401, detail="Session expired")
 
-    region = body.region.strip()
-    if not region:
-        raise HTTPException(status_code=400, detail="Invalid region")
+    region = body.region.strip().lower()
+    if region not in AWS_REGIONS:
+        raise HTTPException(status_code=400, detail=f"Invalid AWS region: {region}")
 
     config["region"] = region
     session_store.update_session(session_id, config)
