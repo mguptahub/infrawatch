@@ -4,9 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from ..db.models import OTPCode, OTPPurpose
 from .valkey_client import get_client as get_valkey
-
-OTP_EXPIRY_MINUTES = 10
-OTP_MAX_ATTEMPTS = 5
+from .config import settings
 
 
 def _fail_key(email: str, purpose: OTPPurpose) -> str:
@@ -33,7 +31,7 @@ def create_otp(db: Session, email: str, purpose: OTPPurpose) -> str:
         email=email,
         code=code,
         purpose=purpose,
-        expires_at=datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES),
+        expires_at=datetime.utcnow() + timedelta(minutes=settings.otp_expiry_minutes),
     )
     db.add(otp)
     db.commit()
@@ -46,7 +44,7 @@ def verify_otp(db: Session, email: str, code: str, purpose: OTPPurpose) -> bool:
 
     # Reject immediately if already locked out
     attempts = valkey.get(fail_key)
-    if attempts and int(attempts) >= OTP_MAX_ATTEMPTS:
+    if attempts and int(attempts) >= settings.otp_max_attempts:
         raise HTTPException(
             status_code=429,
             detail="Too many incorrect attempts. Request a new code.",
@@ -63,8 +61,8 @@ def verify_otp(db: Session, email: str, code: str, purpose: OTPPurpose) -> bool:
     if not otp:
         # Increment failure counter, expire it with the OTP window
         new_count = valkey.incr(fail_key)
-        valkey.expire(fail_key, OTP_EXPIRY_MINUTES * 60)
-        if new_count >= OTP_MAX_ATTEMPTS:
+        valkey.expire(fail_key, settings.otp_expiry_minutes * 60)
+        if new_count >= settings.otp_max_attempts:
             # Invalidate all active OTPs for this email+purpose
             db.query(OTPCode).filter(
                 OTPCode.email == email,

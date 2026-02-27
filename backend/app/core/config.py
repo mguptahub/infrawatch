@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     secret_key: str = "change-this-to-a-random-secret"
     frontend_url: str = "http://localhost:3000"
     cookie_secure: bool = False  # Set to True in production (requires HTTPS)
+    otp_expiry_minutes: int = 10
+    otp_max_attempts: int = 5
 
     # Power AWS keys — used server-side for STS AssumeRole
     power_aws_access_key_id: Optional[str] = None
