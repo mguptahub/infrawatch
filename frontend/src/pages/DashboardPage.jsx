@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import EC2Panel from "../components/EC2Panel";
 import EKSPanel from "../components/EKSPanel";
@@ -26,26 +26,6 @@ const ALL_TABS = [
   { id: "cost",        label: "Cost" },
 ];
 
-const AWS_REGIONS = [
-  { value: "us-east-1",      label: "US East (N. Virginia)" },
-  { value: "us-east-2",      label: "US East (Ohio)" },
-  { value: "us-west-1",      label: "US West (N. California)" },
-  { value: "us-west-2",      label: "US West (Oregon)" },
-  { value: "ca-central-1",   label: "Canada (Central)" },
-  { value: "eu-west-1",      label: "EU (Ireland)" },
-  { value: "eu-west-2",      label: "EU (London)" },
-  { value: "eu-west-3",      label: "EU (Paris)" },
-  { value: "eu-central-1",   label: "EU (Frankfurt)" },
-  { value: "eu-north-1",     label: "EU (Stockholm)" },
-  { value: "ap-southeast-1", label: "AP (Singapore)" },
-  { value: "ap-southeast-2", label: "AP (Sydney)" },
-  { value: "ap-northeast-1", label: "AP (Tokyo)" },
-  { value: "ap-northeast-2", label: "AP (Seoul)" },
-  { value: "ap-south-1",     label: "AP (Mumbai)" },
-  { value: "sa-east-1",      label: "SA (São Paulo)" },
-  { value: "me-south-1",     label: "ME (Bahrain)" },
-  { value: "af-south-1",     label: "Africa (Cape Town)" },
-];
 
 export default function DashboardPage() {
   const { auth, logout, terminate, switchRegion } = useAuth();
@@ -53,6 +33,14 @@ export default function DashboardPage() {
   const [switchingRegion, setSwitchingRegion] = useState(false);
   const [confirmTerminate, setConfirmTerminate] = useState(false);
   const [terminating, setTerminating] = useState(false);
+  const [awsRegions, setAwsRegions] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/otp/regions", { credentials: "include" })
+      .then((r) => r.json())
+      .then(setAwsRegions)
+      .catch(() => {}); // non-critical; select will be empty until loaded
+  }, []);
 
   // Gate tabs to services approved for this session
   const approvedServices = auth?.services || [];
@@ -133,8 +121,8 @@ export default function DashboardPage() {
               disabled={switchingRegion}
               title="Switch AWS region"
             >
-              {AWS_REGIONS.map((r) => (
-                <option key={r.value} value={r.value}>{r.value}</option>
+              {awsRegions.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
               ))}
             </select>
           )}

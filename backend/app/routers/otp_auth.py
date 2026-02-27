@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from ..core.database import get_db
-from ..core.config import settings, AWS_REGIONS
+from ..core.config import settings, AWS_REGIONS, AWS_REGIONS_LIST
 from ..core.limiter import limiter
 from ..core.otp_service import create_otp, verify_otp
 from ..core.email_service import send_otp
@@ -31,6 +31,13 @@ class SwitchRegionBody(BaseModel):
 
 def _is_admin(email: str) -> bool:
     return email.lower() == settings.admin_email.lower()
+
+
+# ─── Region list (public) ─────────────────────────────────────────────────────
+
+@router.get("/regions")
+def list_regions():
+    return [{"value": v, "label": l} for v, l in AWS_REGIONS_LIST]
 
 
 # ─── Request OTP ──────────────────────────────────────────────────────────────

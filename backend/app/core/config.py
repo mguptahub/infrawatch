@@ -1,27 +1,50 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
 
-AWS_REGIONS = {
+# Ordered list — single source of truth for both validation and the /api/regions endpoint.
+# Each entry is (value, human-readable label).
+AWS_REGIONS_LIST = [
     # US
-    "us-east-1", "us-east-2", "us-west-1", "us-west-2",
-    # Europe
-    "eu-west-1", "eu-west-2", "eu-west-3", "eu-central-1", "eu-central-2",
-    "eu-north-1", "eu-south-1", "eu-south-2",
-    # Asia Pacific
-    "ap-east-1", "ap-south-1", "ap-south-2",
-    "ap-southeast-1", "ap-southeast-2", "ap-southeast-3", "ap-southeast-4",
-    "ap-northeast-1", "ap-northeast-2", "ap-northeast-3",
+    ("us-east-1",      "US East (N. Virginia)"),
+    ("us-east-2",      "US East (Ohio)"),
+    ("us-west-1",      "US West (N. California)"),
+    ("us-west-2",      "US West (Oregon)"),
     # Canada
-    "ca-central-1", "ca-west-1",
+    ("ca-central-1",   "Canada (Central)"),
+    ("ca-west-1",      "Canada (West)"),
+    # Europe
+    ("eu-west-1",      "EU (Ireland)"),
+    ("eu-west-2",      "EU (London)"),
+    ("eu-west-3",      "EU (Paris)"),
+    ("eu-central-1",   "EU (Frankfurt)"),
+    ("eu-central-2",   "EU (Zurich)"),
+    ("eu-north-1",     "EU (Stockholm)"),
+    ("eu-south-1",     "EU (Milan)"),
+    ("eu-south-2",     "EU (Spain)"),
+    # Asia Pacific
+    ("ap-east-1",      "AP (Hong Kong)"),
+    ("ap-south-1",     "AP (Mumbai)"),
+    ("ap-south-2",     "AP (Hyderabad)"),
+    ("ap-southeast-1", "AP (Singapore)"),
+    ("ap-southeast-2", "AP (Sydney)"),
+    ("ap-southeast-3", "AP (Jakarta)"),
+    ("ap-southeast-4", "AP (Melbourne)"),
+    ("ap-northeast-1", "AP (Tokyo)"),
+    ("ap-northeast-2", "AP (Seoul)"),
+    ("ap-northeast-3", "AP (Osaka)"),
     # South America
-    "sa-east-1",
+    ("sa-east-1",      "SA (São Paulo)"),
     # Middle East
-    "me-central-1", "me-south-1",
+    ("me-central-1",   "ME (UAE)"),
+    ("me-south-1",     "ME (Bahrain)"),
     # Africa
-    "af-south-1",
+    ("af-south-1",     "Africa (Cape Town)"),
     # Israel
-    "il-central-1",
-}
+    ("il-central-1",   "Israel (Tel Aviv)"),
+]
+
+# Set derived from the list above — used for O(1) validation.
+AWS_REGIONS = {value for value, _ in AWS_REGIONS_LIST}
 
 
 class Settings(BaseSettings):
