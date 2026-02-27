@@ -13,9 +13,9 @@
 |----------|-------|-------|
 | Critical | 4 | 4 |
 | High | 4 | 4 |
-| Medium | 7 | 4 |
+| Medium | 7 | 5 |
 | Low | 2 | 0 |
-| **Total** | **17** | **12** |
+| **Total** | **17** | **13** |
 
 ---
 
@@ -203,7 +203,7 @@ except Exception as e:
 ---
 
 ### M5 — `--reload` in production Docker command
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **File:** `docker-compose.yml:36`
 - **Risk:** `--reload` enables file-watching and hot-reload, intended for development only. Should not be present in a production deployment.
 
@@ -270,7 +270,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | M2 | Medium | `[x]` | `routers/admin.py:151` | `update_user` allows any user as manager |
 | M3 | Medium | `[x]` | `routers/requests_router.py:191` | Auto-registered users get all services |
 | M4 | Medium | `[x]` | `routers/requests_router.py:123` | STS errors leaked to client |
-| M5 | Medium | `[ ]` | `docker-compose.yml:36` | `--reload` in production command |
+| M5 | Medium | `[x]` | `docker-compose.yml:36` | `--reload` in production command |
 | M6 | Medium | `[ ]` | `docker-compose.yml:11` | Default password `changeme` |
 | M7 | Medium | `[ ]` | `docker-compose.yml:22` | Valkey unauthenticated |
 | L1 | Low | `[ ]` | `core/config.py:28` | `SECRET_KEY` unused |
