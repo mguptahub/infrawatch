@@ -16,7 +16,6 @@ services:
       target: builder    # Stop at builder stage, don't run nginx
     command: sh -c "npm start"
     environment:
-      - REACT_APP_API_URL=http://localhost:8000
       - CHOKIDAR_USEPOLLING=true
     ports:
       - "3000:3000"

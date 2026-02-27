@@ -36,7 +36,6 @@ services:
     env_file:
       - .env
     environment:
-      - VALKEY_URL=redis://valkey:6379
       - POSTGRES_HOST=postgres
     depends_on:
       valkey:
