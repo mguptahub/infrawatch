@@ -324,6 +324,9 @@ async def approve_or_deny(body: ApprovalVerifyBody, db: Session = Depends(get_db
     if req.status != RequestStatus.pending:
         raise HTTPException(status_code=409, detail=f"Request already {req.status.value}")
 
+    if body.action not in ("approve", "deny"):
+        raise HTTPException(status_code=400, detail="action must be 'approve' or 'deny'")
+
     approval_token.used = True
     req.reviewed_at = datetime.utcnow()
     req.reviewed_by_email = email
