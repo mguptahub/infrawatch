@@ -1,5 +1,4 @@
-import random
-import string
+import secrets
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from ..db.models import OTPCode, OTPPurpose
@@ -8,7 +7,7 @@ OTP_EXPIRY_MINUTES = 10
 
 
 def generate_otp() -> str:
-    return "".join(random.choices(string.digits, k=6))
+    return "".join(str(secrets.randbelow(10)) for _ in range(6))
 
 
 def create_otp(db: Session, email: str, purpose: OTPPurpose) -> str:
