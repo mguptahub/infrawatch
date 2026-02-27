@@ -12,10 +12,10 @@
 | Severity | Count | Fixed |
 |----------|-------|-------|
 | Critical | 4 | 4 |
-| High | 4 | 3 |
+| High | 4 | 4 |
 | Medium | 7 | 0 |
 | Low | 2 | 0 |
-| **Total** | **17** | **7** |
+| **Total** | **17** | **8** |
 
 ---
 
@@ -130,7 +130,7 @@ A malicious name or denial reason can inject arbitrary HTML into the rendered em
 ---
 
 ### H4 — No OTP attempt lockout
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **File:** `backend/app/core/otp_service.py:34–48`
 - **Risk:** `verify_otp` has no failed-attempt tracking. A valid OTP is only marked used on success. An attacker with a target's email can make unlimited guesses within the 10-minute window.
 
@@ -265,7 +265,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | H1 | High | `[x]` | Multiple cookie setters | `secure=False` hardcoded |
 | H2 | High | `[x]` | `docker-compose.yml:34` | Backend port 8000 publicly exposed |
 | H3 | High | `[x]` | `core/email_service.py:71,104,128` | HTML injection in email templates |
-| H4 | High | `[ ]` | `core/otp_service.py:34` | No OTP attempt lockout |
+| H4 | High | `[x]` | `core/otp_service.py:34` | No OTP attempt lockout |
 | M1 | Medium | `[ ]` | `main.py:20` | CORS origin hardcoded, not env-configurable |
 | M2 | Medium | `[ ]` | `routers/admin.py:151` | `update_user` allows any user as manager |
 | M3 | Medium | `[ ]` | `routers/requests_router.py:191` | Auto-registered users get all services |
