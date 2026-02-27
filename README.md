@@ -1,6 +1,6 @@
-# Cloud Dashboard & Access Dashboard
+# Cloud Dashboard
 
-A central hub for monitoring AWS infrastructure and managing Just-In-Time (JIT) access. This dashboard combines real-time resource visibility with a secure request-approval workflow for temporary AWS credentials using AWS STS.
+A central hub for monitoring **AWS** infrastructure and managing Just-In-Time (JIT) access. This dashboard combines real-time resource visibility with a secure request-approval workflow for temporary AWS credentials using AWS STS.
 
 ## Supported AWS Services
 
