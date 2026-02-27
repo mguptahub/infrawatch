@@ -693,24 +693,45 @@
 
     /* Footer */
     footer {
+      position: relative;
       padding: 3rem 0;
-      border-top: 1px solid var(--border);
     }
 
-    .footer-content {
+    footer::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100vw;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      position: relative;
+    }
+
+    .footer-col {
+      padding: 1.25rem;
+      min-height: 136px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
-      text-align: center;
+      justify-content: space-between;
+      gap: 0.85rem;
+    }
+
+    .footer-col-right {
+      padding-left: 2rem;
     }
 
     .footer-links {
       display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      justify-content: center;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.6rem;
     }
 
     .footer-links a {
@@ -724,7 +745,35 @@
       color: var(--foreground);
     }
 
-    .footer-copyright {
+    .footer-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.65rem;
+    }
+
+    .footer-meta a {
+      color: var(--muted-foreground);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .footer-meta a:hover {
+      color: var(--foreground);
+    }
+
+    .footer-meta a svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      flex: 0 0 auto;
+    }
+
+    .footer-copy {
       font-size: 0.8125rem;
       color: var(--muted-foreground);
     }
@@ -812,9 +861,26 @@
         padding: 4rem 3rem;
       }
 
-      .footer-content {
-        flex-direction: row;
-        justify-content: space-between;
+      .footer-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .footer-grid::before,
+      .footer-grid::after {
+        content: "";
+        position: absolute;
+        top: 0.75rem;
+        bottom: 0.75rem;
+        width: 1px;
+        background: var(--border);
+      }
+
+      .footer-grid::before {
+        left: 33.333%;
+      }
+
+      .footer-grid::after {
+        left: 66.666%;
       }
     }
 
@@ -1351,25 +1417,39 @@ volumes:
 
   <!-- Footer -->
   <footer>
-    <div class="container footer-content">
-      <a href="#" class="logo">
-        <div class="logo-icon">
-          <span class="logo-glyph">⬡</span>
-        </div>
-        Cloud Dashboard
-      </a>
-
-      <div class="footer-links">
-        <a href="https://github.com/mguptahub/cloud-dashboard" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/mguptahub/cloud-dashboard#quick-start" target="_blank" rel="noopener">Documentation</a>
-        <a href="https://github.com/mguptahub/cloud-dashboard/issues" target="_blank" rel="noopener">Issues</a>
-        <a href="https://github.com/mguptahub/cloud-dashboard/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
+    <div class="container footer-grid">
+      <div class="footer-col">
+        <a href="#" class="logo">
+          <div class="logo-icon">
+            <span class="logo-glyph">⬡</span>
+          </div>
+          Cloud Dashboard
+        </a>
+        <div class="footer-copy">© 2026 mguptahub</div>
       </div>
 
-      <div class="theme-toggle" role="group" aria-label="Theme mode">
-        <button type="button" data-theme-btn="light" aria-pressed="false">Light</button>
-        <button type="button" data-theme-btn="dark" aria-pressed="false">Dark</button>
-        <button type="button" data-theme-btn="auto" aria-pressed="true">System</button>
+      <div class="footer-col">
+        <div class="footer-links">
+          <a href="https://github.com/mguptahub/cloud-dashboard#quick-start" target="_blank" rel="noopener">Documentation</a>
+          <a href="https://github.com/mguptahub/cloud-dashboard/issues" target="_blank" rel="noopener">Issues</a>
+          <a href="https://github.com/mguptahub/cloud-dashboard/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
+        </div>
+      </div>
+
+      <div class="footer-col footer-col-right">
+        <div class="footer-meta">
+          <a href="https://github.com/mguptahub/cloud-dashboard" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            GitHub
+          </a>
+          <div class="theme-toggle" role="group" aria-label="Theme mode">
+            <button type="button" data-theme-btn="light" aria-pressed="false">Light</button>
+            <button type="button" data-theme-btn="dark" aria-pressed="false">Dark</button>
+            <button type="button" data-theme-btn="auto" aria-pressed="true">System</button>
+          </div>
+        </div>
       </div>
     </div>
   </footer>
