@@ -11,11 +11,11 @@
 
 | Severity | Count | Fixed |
 |----------|-------|-------|
-| Critical | 4 | 3 |
+| Critical | 4 | 4 |
 | High | 4 | 0 |
 | Medium | 7 | 0 |
 | Low | 2 | 0 |
-| **Total** | **17** | **3** |
+| **Total** | **17** | **4** |
 
 ---
 
@@ -75,7 +75,7 @@ if body.action not in ("approve", "deny"):
 ---
 
 ### C4 — No rate limiting on OTP endpoints
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **Files:** `backend/app/routers/otp_auth.py:37`, `backend/app/routers/requests_router.py:280`
 - **Risk:** Unlimited unauthenticated requests to OTP endpoints enables two attacks:
   1. **Email flooding** — carpet-bomb any known email address with OTP codes
@@ -261,7 +261,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | C1 | Critical | `[x]` | `core/otp_service.py:11` | Non-CSPRNG used for OTP generation |
 | C2 | Critical | `[x]` | `routers/auth.py`, `main.py:47` | Legacy key-auth bypasses OTP/approval |
 | C3 | Critical | `[x]` | `routers/requests_router.py:331` | Non-"deny" action defaults to approve |
-| C4 | Critical | `[ ]` | `routers/otp_auth.py:37` | No rate limiting on OTP endpoints |
+| C4 | Critical | `[x]` | `routers/otp_auth.py:37` | No rate limiting on OTP endpoints |
 | H1 | High | `[ ]` | Multiple cookie setters | `secure=False` hardcoded |
 | H2 | High | `[ ]` | `docker-compose.yml:34` | Backend port 8000 publicly exposed |
 | H3 | High | `[ ]` | `core/email_service.py:71,104,128` | HTML injection in email templates |

@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..core.config import settings
+from ..core.limiter import limiter
 from ..core.otp_service import create_otp, verify_otp
 from ..core.email_service import send_otp
 from ..core.session import session_store, SESSION_COOKIE_NAME, SESSION_TIMEOUT_MINUTES
@@ -35,7 +36,8 @@ def _is_admin(email: str) -> bool:
 # ─── Request OTP ──────────────────────────────────────────────────────────────
 
 @router.post("/request")
-async def request_otp(body: RequestOTPBody, db: Session = Depends(get_db)):
+@limiter.limit("5/10 minute")
+async def request_otp(request: Request, body: RequestOTPBody, db: Session = Depends(get_db)):
     email = body.email.strip().lower()
 
     # Admin always gets OTP
@@ -74,7 +76,9 @@ async def request_otp(body: RequestOTPBody, db: Session = Depends(get_db)):
 # ─── Verify OTP & create session ──────────────────────────────────────────────
 
 @router.post("/verify")
+@limiter.limit("10/minute")
 async def verify_otp_and_login(
+    request: Request,
     body: VerifyOTPBody,
     response: Response,
     db: Session = Depends(get_db),

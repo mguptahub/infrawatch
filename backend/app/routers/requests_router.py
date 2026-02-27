@@ -7,6 +7,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..core.config import settings
+from ..core.limiter import limiter
 from ..core.otp_service import create_otp, verify_otp
 from ..core.email_service import (
     send_manager_notification, send_otp,
@@ -278,7 +279,8 @@ def get_approval_request(token: str, db: Session = Depends(get_db)):
 # ─── Send OTP to manager (first step of approval flow) ────────────────────────
 
 @router.post("/approve/otp")
-async def send_approval_otp(body: OTPForApprovalBody, db: Session = Depends(get_db)):
+@limiter.limit("5/10 minute")
+async def send_approval_otp(request: Request, body: OTPForApprovalBody, db: Session = Depends(get_db)):
     # Verify the approval token is valid
     approval_token = db.query(ApprovalToken).filter(
         ApprovalToken.token == body.token,

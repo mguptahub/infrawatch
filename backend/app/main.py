@@ -1,8 +1,12 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from .core.session import session_store, SESSION_COOKIE_NAME, SESSION_TIMEOUT_MINUTES
 from .core.database import init_db
+from .core.limiter import limiter
 from .routers import ec2, eks, rds, cost, opensearch, mq, elasticache, secrets, ses, lb, iam
 from .routers import otp_auth, requests_router, admin
 
@@ -14,6 +18,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Cloud Dashboard API", version="2.0.0", lifespan=lifespan)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
