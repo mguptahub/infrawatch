@@ -14,8 +14,8 @@
 | Critical | 4 | 4 |
 | High | 4 | 4 |
 | Medium | 7 | 7 |
-| Low | 2 | 0 |
-| **Total** | **17** | **15** |
+| Low | 2 | 1 |
+| **Total** | **17** | **16** |
 
 ---
 
@@ -237,7 +237,7 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 ---
 
 ### L1 — `SECRET_KEY` is loaded but never used
-- **Status:** `[ ]` Open
+- **Status:** `[x]` Fixed
 - **File:** `backend/app/core/config.py:28`
 - **Risk:** `secret_key` is defined in `Settings` but never referenced. This implies HMAC-signed sessions but sessions are just opaque random IDs stored in Valkey. Misleading to future maintainers.
 
@@ -273,5 +273,5 @@ POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
 | M5 | Medium | `[x]` | `docker-compose.yml:36` | `--reload` in production command |
 | M6 | Medium | `[x]` | `docker-compose.yml:11` | Default password `changeme` |
 | M7 | Medium | `[x]` | `docker-compose.yml:22` | Valkey unauthenticated |
-| L1 | Low | `[ ]` | `core/config.py:28` | `SECRET_KEY` unused |
+| L1 | Low | `[x]` | `core/config.py:28` | `SECRET_KEY` unused |
 | L2 | Low | `[ ]` | `routers/otp_auth.py:217` | Region not validated |
