@@ -8,6 +8,4 @@ __pycache__/
 secrets.json
 genkeys.sh
 .worktrees/
-.worktrees/
-.worktrees/
-.worktrees/
+.plans/
