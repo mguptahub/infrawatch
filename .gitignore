@@ -9,3 +9,5 @@ secrets.json
 genkeys.sh
 .worktrees/
 .plans/
+.playwright-mcp/
+mobile-*.png

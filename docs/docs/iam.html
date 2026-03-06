@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-theme-mode="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IAM Setup — InfraWatch Docs</title>
+  <meta name="description" content="Configure AWS IAM roles and permissions for InfraWatch.">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body>
+
+  <header class="docs-nav"></header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar"></aside>
+
+    <aside class="docs-toc">
+      <div class="toc-heading">On this page</div>
+      <a href="#overview" class="toc-link">How it works</a>
+      <a href="#iam-user" class="toc-link">IAM user</a>
+      <a href="#iam-role" class="toc-link">IAM role</a>
+      <a href="#permissions" class="toc-link">Required permissions</a>
+      <a href="#session-policies" class="toc-link">Session policies</a>
+      <a href="#health-api" class="toc-link">AWS Health API</a>
+    </aside>
+
+    <main class="docs-content">
+      <h1>IAM Setup</h1>
+      <p class="subtitle">InfraWatch needs an IAM user and role to access AWS services. This page explains how to set them up with least-privilege permissions.</p>
+
+      <h2 id="overview">How It Works</h2>
+
+      <p>InfraWatch uses a two-layer IAM model:</p>
+
+      <ol>
+        <li><strong>IAM User</strong> (<code>POWER_AWS_ACCESS_KEY_ID</code>) — has permission to call <code>sts:AssumeRole</code> on the base role. This is the only permission this user needs.</li>
+        <li><strong>IAM Role</strong> (<code>BASE_ROLE_ARN</code>) — has read-only access to AWS services. The backend assumes this role and applies a <strong>restrictive session policy</strong> per request, scoped to only the services the user was approved for.</li>
+      </ol>
+
+      <div class="callout callout-info">
+        <div class="callout-title">Session policies can only restrict, never expand</div>
+        Even if the base role has broad permissions, each user session is scoped down to only the specific services they were approved for. CloudWatch is always included for metrics.
+      </div>
+
+      <h2 id="iam-user">Step 1 — Create the IAM User</h2>
+
+      <p>Create an IAM user with programmatic access (access key + secret key). This user only needs one permission:</p>
+
+      <div class="code-block">
+        <div class="code-title"><span>IAM Policy for the User</span></div>
+        <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws:iam::123456789012:role/InfraWatchRole"
+    }
+  ]
+}</code></pre>
+      </div>
+
+      <p>Set the access key and secret in your <code>.env</code> or Helm values as <code>POWER_AWS_ACCESS_KEY_ID</code> and <code>POWER_AWS_SECRET_ACCESS_KEY</code>.</p>
+
+      <h2 id="iam-role">Step 2 — Create the IAM Role</h2>
+
+      <p>Create an IAM role (e.g., <code>InfraWatchRole</code>) that the IAM user can assume. The trust policy should allow the user's account:</p>
+
+      <div class="code-block">
+        <div class="code-title"><span>Trust Policy</span></div>
+        <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::123456789012:user/infrawatch-power-user"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}</code></pre>
+      </div>
+
+      <p>Set this role's ARN as <code>BASE_ROLE_ARN</code> in your configuration.</p>
+
+      <h2 id="permissions">Step 3 — Attach Permissions to the Role</h2>
+
+      <p>The base role needs read-only access to the AWS services InfraWatch monitors. Attach a policy with the following actions:</p>
+
+      <div class="table-wrap"><table>
+        <thead>
+          <tr><th>Service</th><th>Required IAM Actions</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>EC2</td><td><code>ec2:Describe*</code></td></tr>
+          <tr><td>EKS</td><td><code>eks:List*</code>, <code>eks:Describe*</code></td></tr>
+          <tr><td>Databases</td><td><code>rds:Describe*</code>, <code>rds:List*</code>, <code>docdb:Describe*</code>, <code>docdb:List*</code></td></tr>
+          <tr><td>ElastiCache</td><td><code>elasticache:Describe*</code>, <code>elasticache:List*</code></td></tr>
+          <tr><td>OpenSearch</td><td><code>es:List*</code>, <code>es:Describe*</code>, <code>es:ESHttpGet</code></td></tr>
+          <tr><td>MQ</td><td><code>mq:List*</code>, <code>mq:Describe*</code></td></tr>
+          <tr><td>SES</td><td><code>ses:*</code>, <code>sesv2:*</code></td></tr>
+          <tr><td>Secrets Manager</td><td><code>secretsmanager:Get*</code>, <code>secretsmanager:List*</code>, <code>secretsmanager:Describe*</code></td></tr>
+          <tr><td>IAM</td><td><code>iam:Get*</code>, <code>iam:List*</code>, <code>iam:GenerateCredentialReport</code></td></tr>
+          <tr><td>Cost Explorer</td><td><code>ce:Get*</code>, <code>ce:List*</code>, <code>ce:Describe*</code></td></tr>
+          <tr><td>Load Balancers</td><td><code>elasticloadbalancing:Describe*</code></td></tr>
+          <tr><td>CloudWatch</td><td><code>cloudwatch:Get*</code>, <code>cloudwatch:List*</code></td></tr>
+          <tr><td>AWS Health</td><td><code>health:Describe*</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout callout-warn">
+        <div class="callout-title">CloudWatch is always included</div>
+        Every session policy includes CloudWatch permissions regardless of which services the user requested, since all service panels need CloudWatch for metrics.
+      </div>
+
+      <h3>Full IAM Policy</h3>
+
+      <p>Here's a complete policy you can attach to the role:</p>
+
+      <div class="code-block">
+        <div class="code-title">
+          <span>InfraWatchReadOnlyPolicy</span>
+          <button type="button" class="copy-btn" data-copy="policy-code" aria-label="Copy">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/></svg>
+          </button>
+        </div>
+        <pre><code id="policy-code">{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EC2",
+      "Effect": "Allow",
+      "Action": "ec2:Describe*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "EKS",
+      "Effect": "Allow",
+      "Action": ["eks:List*", "eks:Describe*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "Databases",
+      "Effect": "Allow",
+      "Action": [
+        "rds:Describe*", "rds:List*",
+        "docdb:Describe*", "docdb:List*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ElastiCache",
+      "Effect": "Allow",
+      "Action": ["elasticache:Describe*", "elasticache:List*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "OpenSearch",
+      "Effect": "Allow",
+      "Action": ["es:List*", "es:Describe*", "es:ESHttpGet"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "MQ",
+      "Effect": "Allow",
+      "Action": ["mq:List*", "mq:Describe*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SES",
+      "Effect": "Allow",
+      "Action": ["ses:*", "sesv2:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SecretsManager",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:Get*",
+        "secretsmanager:List*",
+        "secretsmanager:Describe*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IAM",
+      "Effect": "Allow",
+      "Action": [
+        "iam:Get*", "iam:List*",
+        "iam:GenerateCredentialReport"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CostExplorer",
+      "Effect": "Allow",
+      "Action": ["ce:Get*", "ce:List*", "ce:Describe*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "LoadBalancers",
+      "Effect": "Allow",
+      "Action": "elasticloadbalancing:Describe*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudWatch",
+      "Effect": "Allow",
+      "Action": ["cloudwatch:Get*", "cloudwatch:List*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "Health",
+      "Effect": "Allow",
+      "Action": "health:Describe*",
+      "Resource": "*"
+    }
+  ]
+}</code></pre>
+      </div>
+
+      <h2 id="session-policies">Session Policies</h2>
+
+      <p>When a user's access request is approved, InfraWatch calls <code>sts:AssumeRole</code> with a <strong>session policy</strong> that limits the temporary credentials to only the approved services. For example, if a user is approved for EC2 and RDS, the session policy only includes <code>ec2:Describe*</code>, <code>rds:Describe*</code>, <code>rds:List*</code>, and <code>cloudwatch:*</code>.</p>
+
+      <p>This means:</p>
+
+      <ul>
+        <li>The base role defines the <strong>maximum possible permissions</strong></li>
+        <li>Each session is scoped to the <strong>minimum required permissions</strong></li>
+        <li>Credentials auto-expire after the approved duration (up to 12 hours)</li>
+        <li>No manual credential cleanup needed</li>
+      </ul>
+
+      <h2 id="health-api">AWS Health API</h2>
+
+      <p>The AWS Health API (<code>health:Describe*</code>) requires a <strong>Business or Enterprise</strong> support plan. If your account doesn't have one, the collector handles the <code>SubscriptionRequiredException</code> gracefully — health events simply won't appear in the alerts panel.</p>
+
+      <div class="docs-footer-nav">
+        <a href="./configuration.html" class="docs-footer-link">
+          <span class="label">Previous</span>
+          <span class="title">← Configuration</span>
+        </a>
+        <div></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../assets/docs.js"></script>
+</body>
+</html>

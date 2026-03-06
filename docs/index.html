@@ -620,147 +620,6 @@
     }
 
     /* Deployment Section */
-    .cta {
-      padding: 6rem 0;
-    }
-
-    .cta-box {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      padding: 3rem 1.5rem;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .cta-box h2 {
-      font-size: clamp(1.75rem, 4vw, 2.5rem);
-      font-weight: 700;
-      margin-bottom: 1.25rem;
-      position: relative;
-      text-align: center;
-    }
-
-    .deploy-tabs {
-      display: flex;
-      gap: 0.25rem;
-      margin-bottom: 1.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .deploy-tab {
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid transparent;
-      color: var(--muted-foreground);
-      font-size: 0.9rem;
-      font-weight: 600;
-      padding: 0.6rem 1.25rem;
-      cursor: pointer;
-      transition: color 0.2s, border-color 0.2s;
-      font-family: inherit;
-    }
-
-    .deploy-tab:hover {
-      color: var(--foreground);
-    }
-
-    .deploy-tab.active {
-      color: var(--green);
-      border-bottom-color: var(--green);
-    }
-
-    .deploy-tab-icon {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      vertical-align: -2px;
-      margin-right: 0.4rem;
-    }
-
-    .deploy-pane {
-      display: none;
-    }
-
-    .deploy-pane.active {
-      display: block;
-    }
-
-    .deployment-panel {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1rem;
-      position: relative;
-    }
-
-    .deployment-block {
-      background: var(--accent);
-      border: 1px solid var(--border);
-      border-radius: 0.875rem;
-      padding: 1rem;
-      display: grid;
-      gap: 0.75rem;
-      align-content: start;
-    }
-
-    .deployment-title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      font-size: 0.85rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--muted-foreground);
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .code-copy-btn {
-      border: 0;
-      background: transparent;
-      color: var(--muted-foreground);
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: background-color 0.2s ease, color 0.2s ease;
-    }
-
-    .code-copy-btn:hover {
-      background: var(--card);
-      color: var(--foreground);
-    }
-
-    .code-copy-btn:focus-visible {
-      outline: 2px solid var(--primary);
-      outline-offset: 2px;
-    }
-
-    .code-copy-btn.copied {
-      color: var(--primary);
-    }
-
-    .code-copy-btn svg {
-      width: 16px;
-      height: 16px;
-      fill: currentColor;
-    }
-
-    .deployment-pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 0.85rem;
-      line-height: 1.45;
-      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      color: var(--foreground);
-    }
-
     /* Footer */
     footer {
       position: relative;
@@ -962,10 +821,6 @@
         grid-template-columns: repeat(4, 1fr);
       }
 
-      .cta-box {
-        padding: 4rem 3rem;
-      }
-
       .footer-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
@@ -1019,124 +874,6 @@
     .delay-200 { animation-delay: 0.2s; }
     .delay-300 { animation-delay: 0.3s; }
 
-    /* IAM Table */
-    .iam-table-wrap {
-      overflow-x: auto;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--card);
-    }
-
-    .iam-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.875rem;
-    }
-
-    .iam-table thead {
-      background: var(--accent);
-    }
-
-    .iam-table th {
-      text-align: left;
-      padding: 0.75rem 1.25rem;
-      font-weight: 600;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted-foreground);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .iam-table td {
-      padding: 0.65rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      color: var(--foreground);
-    }
-
-    .iam-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .iam-table td:first-child {
-      font-weight: 500;
-      white-space: nowrap;
-      color: var(--foreground);
-    }
-
-    .iam-table code {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      background: var(--accent);
-      padding: 0.15rem 0.4rem;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      color: var(--primary);
-    }
-
-    .iam-note {
-      font-size: 0.75rem;
-      color: var(--muted-foreground);
-      font-style: italic;
-    }
-
-    .iam-footer-note {
-      margin-top: 1.25rem;
-      font-size: 0.85rem;
-      color: var(--muted-foreground);
-      text-align: center;
-    }
-
-    .iam-details {
-      margin-top: 2rem;
-      margin-bottom: 1rem;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--card);
-    }
-
-    .iam-summary {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      padding: 1rem 1.25rem;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: var(--foreground);
-      list-style: none;
-      user-select: none;
-    }
-
-    .iam-summary::-webkit-details-marker { display: none; }
-    .iam-summary::marker { display: none; content: ""; }
-
-    .iam-summary svg:first-child {
-      color: var(--primary);
-      flex-shrink: 0;
-    }
-
-    .iam-chevron {
-      margin-left: auto;
-      flex-shrink: 0;
-      transition: transform 0.2s ease;
-      color: var(--muted-foreground);
-    }
-
-    .iam-details[open] .iam-chevron {
-      transform: rotate(180deg);
-    }
-
-    .iam-details-body {
-      padding: 0 1.25rem 1.25rem;
-    }
-
-    .iam-desc {
-      font-size: 0.875rem;
-      color: var(--muted-foreground);
-      margin-bottom: 1rem;
-      line-height: 1.6;
-    }
   </style>
 </head>
 <body>
@@ -1159,7 +896,7 @@
 
       <div class="nav-buttons">
         <span class="nav-version" id="release-version"></span>
-        <a href="#get-started" class="btn btn-primary">
+        <a href="docs/" class="btn btn-primary">
           Get Started
         </a>
       </div>
@@ -1179,7 +916,7 @@
     <a href="#services" onclick="toggleMobileMenu()">Services</a>
     <a href="#workflow" onclick="toggleMobileMenu()">Workflow</a>
     <a href="#architecture" onclick="toggleMobileMenu()">Architecture</a>
-    <a href="#get-started" onclick="toggleMobileMenu()">Get Started</a>
+    <a href="docs/" onclick="toggleMobileMenu()">Get Started</a>
   </div>
 
   <!-- Hero Section -->
@@ -1199,7 +936,7 @@
       </p>
 
       <div class="hero-buttons">
-        <a href="#get-started" class="btn btn-primary">
+        <a href="docs/" class="btn btn-primary">
           Get Started
         </a>
         <a href="#features" class="btn btn-secondary">
@@ -1551,265 +1288,6 @@
     </div>
   </section>
 
-	  <!-- Deployment Section -->
-  <section class="cta" id="get-started">
-    <div class="container">
-      <div class="cta-box">
-        <h2>Get Started</h2>
-
-        <details class="iam-details">
-          <summary class="iam-summary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            </svg>
-            Prerequisite: IAM Setup
-            <svg class="iam-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </summary>
-          <div class="iam-details-body">
-            <p class="iam-desc">Create an IAM user with programmatic access and set its credentials as <code>POWER_AWS_ACCESS_KEY_ID</code> and <code>POWER_AWS_SECRET_ACCESS_KEY</code> in your <code>.env</code>. This user must be allowed to call <code>sts:AssumeRole</code> on the role specified by <code>BASE_ROLE_ARN</code>. The backend assumes that role and applies a restrictive session policy per request — each approved service maps to a scoped IAM statement. CloudWatch is always included for metrics.</p>
-            <p class="iam-desc">The base role (<code>BASE_ROLE_ARN</code>) must have the following permissions:</p>
-            <div class="iam-table-wrap">
-              <table class="iam-table">
-                <thead>
-                  <tr>
-                    <th>Service</th>
-                    <th>Required IAM Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>EC2</td><td><code>ec2:Describe*</code></td></tr>
-                  <tr><td>EKS</td><td><code>eks:List*</code>, <code>eks:Describe*</code></td></tr>
-                  <tr><td>Databases</td><td><code>rds:Describe*</code>, <code>rds:List*</code>, <code>docdb:Describe*</code>, <code>docdb:List*</code></td></tr>
-                  <tr><td>ElastiCache</td><td><code>elasticache:Describe*</code>, <code>elasticache:List*</code></td></tr>
-                  <tr><td>OpenSearch</td><td><code>es:List*</code>, <code>es:Describe*</code>, <code>es:ESHttpGet</code></td></tr>
-                  <tr><td>MQ</td><td><code>mq:List*</code>, <code>mq:Describe*</code></td></tr>
-                  <tr><td>SES</td><td><code>ses:*</code>, <code>sesv2:*</code></td></tr>
-                  <tr><td>Secrets Manager</td><td><code>secretsmanager:Get*</code>, <code>secretsmanager:List*</code>, <code>secretsmanager:Describe*</code></td></tr>
-                  <tr><td>IAM</td><td><code>iam:Get*</code>, <code>iam:List*</code>, <code>iam:GenerateCredentialReport</code></td></tr>
-                  <tr><td>Cost Explorer</td><td><code>ce:Get*</code>, <code>ce:List*</code>, <code>ce:Describe*</code></td></tr>
-                  <tr><td>Load Balancers</td><td><code>elasticloadbalancing:Describe*</code></td></tr>
-                  <tr><td>CloudWatch</td><td><code>cloudwatch:Get*</code>, <code>cloudwatch:List*</code> <span class="iam-note">(always included)</span></td></tr>
-                  <tr><td>AWS Health</td><td><code>health:Describe*</code></td></tr>
-                </tbody>
-              </table>
-            </div>
-            <p class="iam-footer-note">Session policies can only restrict, never expand, the base role's permissions.</p>
-          </div>
-        </details>
-
-        <div class="deploy-tabs">
-          <button type="button" class="deploy-tab active" data-tab="docker" onclick="switchDeployTab('docker')">
-            <svg class="deploy-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/></svg>Docker Compose
-          </button>
-          <button type="button" class="deploy-tab" data-tab="k8s" onclick="switchDeployTab('k8s')">
-            <svg class="deploy-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Kubernetes (Helm)
-          </button>
-        </div>
-
-        <!-- Docker Compose pane -->
-        <div class="deploy-pane active" id="pane-docker">
-          <div class="deployment-panel">
-            <div class="deployment-block">
-              <div class="deployment-title">
-                <span>Step 1 · .env</span>
-                <button type="button" class="code-copy-btn" data-copy-target="deployment-env" aria-label="Copy Step 1 code">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/>
-                  </svg>
-                </button>
-              </div>
-              <pre id="deployment-env" class="deployment-pre"># Admin
-ADMIN_EMAIL=admin@company.com
-
-# AWS Power Keys (server-side only)
-POWER_AWS_ACCESS_KEY_ID=...
-POWER_AWS_SECRET_ACCESS_KEY=...
-POWER_AWS_REGION=us-east-1
-BASE_ROLE_ARN=arn:aws:iam::123456789012:role/PowerUserRole
-
-# Collector regions (optional — empty = all)
-# COLLECTOR_REGIONS=us-east-1,us-east-2,us-west-2
-
-# SMTP
-SMTP_HOST=smtp.company.com
-SMTP_PORT=587
-SMTP_USER=...
-SMTP_PASSWORD=...
-SMTP_FROM=noreply@company.com
-
-# Postgres
-POSTGRES_HOST=postgres
-POSTGRES_PORT=5432
-POSTGRES_DB=awsdashboard
-POSTGRES_USER=awsdashboard
-POSTGRES_PASSWORD=&lt;strong-password&gt;
-
-# Valkey
-VALKEY_PASSWORD=&lt;strong-password&gt;
-VALKEY_URL=redis://:${VALKEY_PASSWORD}@valkey:6379
-
-# App
-COOKIE_SECURE=false
-CORS_ORIGINS=http://localhost:4000
-OTP_EXPIRY_MINUTES=10
-OTP_MAX_ATTEMPTS=5
-
-# Auto-registration (optional)
-# ALLOWED_DOMAINS=company.com,contractor.com</pre>
-            </div>
-            <div class="deployment-block">
-              <div class="deployment-title">
-                <span>Step 2 · docker-compose.yml</span>
-                <button type="button" class="code-copy-btn" data-copy-target="deployment-compose" aria-label="Copy Step 2 code">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/>
-                  </svg>
-                </button>
-              </div>
-              <pre id="deployment-compose" class="deployment-pre">services:
-  backend:
-    image: mguptahub/infrawatch-backend:latest
-    env_file:
-      - .env
-    depends_on:
-      - db
-      - valkey
-
-  frontend:
-    image: mguptahub/infrawatch-frontend:latest
-    ports:
-      - "4000:80"
-    depends_on:
-      - backend
-
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-awsdashboard}
-      POSTGRES_USER: ${POSTGRES_USER:-awsdashboard}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
-  valkey:
-    image: valkey/valkey:8-alpine
-    command: ["valkey-server", "--requirepass", "${VALKEY_PASSWORD:?required}"]
-
-volumes:
-  db_data:</pre>
-            </div>
-          </div>
-        </div>
-
-        <!-- Kubernetes (Helm) pane -->
-        <div class="deploy-pane" id="pane-k8s">
-          <div class="deployment-panel">
-            <div class="deployment-block">
-              <div class="deployment-title">
-                <span>values.yaml</span>
-                <button type="button" class="code-copy-btn" data-copy-target="deployment-values" aria-label="Copy values.yaml">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/>
-                  </svg>
-                </button>
-              </div>
-              <pre id="deployment-values" class="deployment-pre"># AWS credentials
-aws:
-  powerAccessKeyId: "AKIA..."
-  powerSecretAccessKey: "..."
-  region: us-east-1
-  baseRoleArn: "arn:aws:iam::123456789012:role/..."
-
-# Application
-app:
-  adminEmail: admin@company.com
-  cookieSecure: true
-  corsOrigins: https://infrawatch.example.com
-
-# SMTP
-smtp:
-  host: smtp.company.com
-  port: 587
-  user: "..."
-  password: "..."
-  from: noreply@company.com
-
-# PostgreSQL (in-cluster)
-postgresql:
-  enabled: true
-  auth:
-    password: "&lt;strong-password&gt;"
-
-# External PostgreSQL (set postgresql.enabled: false)
-# externalPostgresql:
-#   host: my-rds.example.com
-#   password: "secret"
-
-# Valkey (in-cluster)
-valkey:
-  enabled: true
-  password: "&lt;strong-password&gt;"
-
-# External Valkey (set valkey.enabled: false)
-# externalValkey:
-#   url: redis://:pass@my-redis:6379
-
-# Ingress
-ingress:
-  enabled: true
-  className: nginx
-  hosts:
-    - host: infrawatch.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: infrawatch-tls
-      hosts:
-        - infrawatch.example.com</pre>
-            </div>
-            <div class="deployment-block">
-              <div class="deployment-title">
-                <span>Install</span>
-                <button type="button" class="code-copy-btn" data-copy-target="deployment-helm" aria-label="Copy Helm commands">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/>
-                  </svg>
-                </button>
-              </div>
-              <pre id="deployment-helm" class="deployment-pre"># Add the Helm repo
-helm repo add infrawatch \
-  https://infrawatch.mguptahub.com/helm
-helm repo update
-
----
-
-# Install with values file
-helm install infrawatch infrawatch/infrawatch \
-  -f values.yaml
-
----
-
-# Or use --set flags directly
-helm install infrawatch infrawatch/infrawatch \
-  --set aws.powerAccessKeyId=AKIA... \
-  --set aws.powerSecretAccessKey=... \
-  --set aws.baseRoleArn=arn:aws:iam::... \
-  --set app.adminEmail=admin@company.com \
-  --set smtp.host=smtp.company.com \
-  --set smtp.from=noreply@company.com \
-  --set postgresql.auth.password=secret \
-  --set valkey.password=secret</pre>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
   <!-- Footer -->
   <footer>
     <div class="container footer-grid">
@@ -1825,7 +1303,7 @@ helm install infrawatch infrawatch/infrawatch \
 
       <div class="footer-col">
         <div class="footer-links">
-          <a href="https://github.com/mguptahub/infrawatch#quick-start" target="_blank" rel="noopener">Documentation</a>
+          <a href="docs/">Documentation</a>
           <a href="https://github.com/mguptahub/infrawatch/issues" target="_blank" rel="noopener">Issues</a>
           <a href="https://github.com/mguptahub/infrawatch/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
         </div>
@@ -1922,12 +1400,6 @@ helm install infrawatch infrawatch/infrawatch \
       menu.classList.toggle('active');
     }
 
-    // Deploy tab switcher
-    function switchDeployTab(tab) {
-      document.querySelectorAll('.deploy-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
-      document.querySelectorAll('.deploy-pane').forEach(pane => pane.classList.toggle('active', pane.id === 'pane-' + tab));
-    }
-
     // Copy to clipboard
     function copyToClipboard(text) {
       navigator.clipboard.writeText(text).then(() => {
@@ -1940,38 +1412,6 @@ helm install infrawatch infrawatch/infrawatch \
         }, 2000);
       });
     }
-
-    const copyBlockText = async (targetId) => {
-      const node = document.getElementById(targetId);
-      if (!node) return false;
-      const text = node.textContent || "";
-      try {
-        await navigator.clipboard.writeText(text);
-        return true;
-      } catch (_error) {
-        const temp = document.createElement("textarea");
-        temp.value = text;
-        temp.setAttribute("readonly", "true");
-        temp.style.position = "absolute";
-        temp.style.left = "-9999px";
-        document.body.appendChild(temp);
-        temp.select();
-        const copied = document.execCommand("copy");
-        document.body.removeChild(temp);
-        return copied;
-      }
-    };
-
-    document.querySelectorAll(".code-copy-btn").forEach((button) => {
-      button.addEventListener("click", async () => {
-        const copied = await copyBlockText(button.dataset.copyTarget);
-        if (!copied) return;
-        button.classList.add("copied");
-        setTimeout(() => {
-          button.classList.remove("copied");
-        }, 1200);
-      });
-    });
 
     // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {

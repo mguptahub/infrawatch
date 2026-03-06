@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-theme-mode="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kubernetes (Helm) — InfraWatch Docs</title>
+  <meta name="description" content="Deploy InfraWatch to Kubernetes using the official Helm chart.">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body>
+
+  <header class="docs-nav"></header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar"></aside>
+
+    <aside class="docs-toc">
+      <div class="toc-heading">On this page</div>
+      <a href="#prerequisites" class="toc-link">Prerequisites</a>
+      <a href="#add-repo" class="toc-link">Add Helm repo</a>
+      <a href="#values" class="toc-link">Configure values</a>
+      <a href="#install" class="toc-link">Install</a>
+      <a href="#external-db" class="toc-link">External database</a>
+      <a href="#external-valkey" class="toc-link">External Valkey</a>
+      <a href="#ingress" class="toc-link">Ingress</a>
+      <a href="#upgrade" class="toc-link">Upgrade</a>
+    </aside>
+
+    <main class="docs-content">
+      <h1>Deploy with Kubernetes (Helm)</h1>
+      <p class="subtitle">Deploy InfraWatch to any Kubernetes cluster using the official Helm chart. Supports in-cluster or external PostgreSQL and Valkey.</p>
+
+      <h2 id="prerequisites">Prerequisites</h2>
+
+      <ul>
+        <li>Kubernetes 1.24+ cluster</li>
+        <li><a href="https://helm.sh/docs/intro/install/" target="_blank" rel="noopener">Helm 3</a></li>
+        <li>An AWS IAM role with the required permissions (see <a href="./iam.html">IAM Setup</a>)</li>
+        <li>SMTP credentials for email delivery</li>
+      </ul>
+
+      <h2 id="add-repo">Step 1 — Add the Helm repo</h2>
+
+      <div class="code-block">
+        <div class="code-title">
+          <span>Terminal</span>
+          <button type="button" class="copy-btn" data-copy="repo-code" aria-label="Copy">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/></svg>
+          </button>
+        </div>
+        <pre><code id="repo-code">helm repo add infrawatch https://infrawatch.mguptahub.com/helm
+helm repo update</code></pre>
+      </div>
+
+      <h2 id="values">Step 2 — Configure values</h2>
+
+      <p>Create a <code>values.yaml</code> file with your configuration:</p>
+
+      <div class="code-block">
+        <div class="code-title">
+          <span>values.yaml</span>
+          <button type="button" class="copy-btn" data-copy="values-code" aria-label="Copy">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/></svg>
+          </button>
+        </div>
+        <pre><code id="values-code"># AWS credentials (server-side only)
+aws:
+  powerAccessKeyId: "AKIA..."
+  powerSecretAccessKey: "..."
+  region: us-east-1
+  baseRoleArn: "arn:aws:iam::123456789012:role/PowerUserRole"
+
+# Application
+app:
+  adminEmail: admin@company.com
+  cookieSecure: true
+  corsOrigins: https://infrawatch.example.com
+
+# SMTP
+smtp:
+  host: smtp.company.com
+  port: 587
+  user: "..."
+  password: "..."
+  from: noreply@company.com
+
+# PostgreSQL (in-cluster)
+postgresql:
+  enabled: true
+  auth:
+    password: "strong-password"
+
+# Valkey (in-cluster)
+valkey:
+  enabled: true
+  password: "strong-password"
+
+# Ingress
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: infrawatch.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: infrawatch-tls
+      hosts:
+        - infrawatch.example.com</code></pre>
+      </div>
+
+      <p>See the <a href="./configuration.html#helm-values">full values reference</a> for all available options.</p>
+
+      <h2 id="install">Step 3 — Install</h2>
+
+      <p>Using the values file:</p>
+
+      <div class="code-block">
+        <div class="code-title">
+          <span>Terminal</span>
+          <button type="button" class="copy-btn" data-copy="install-code" aria-label="Copy">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/></svg>
+          </button>
+        </div>
+        <pre><code id="install-code">helm install infrawatch infrawatch/infrawatch -f values.yaml</code></pre>
+      </div>
+
+      <p>Or use <code>--set</code> flags directly:</p>
+
+      <div class="code-block">
+        <div class="code-title"><span>Terminal</span></div>
+        <pre><code>helm install infrawatch infrawatch/infrawatch \
+  --set aws.powerAccessKeyId=AKIA... \
+  --set aws.powerSecretAccessKey=... \
+  --set aws.baseRoleArn=arn:aws:iam::123456789012:role/PowerUserRole \
+  --set app.adminEmail=admin@company.com \
+  --set smtp.host=smtp.company.com \
+  --set smtp.from=noreply@company.com \
+  --set postgresql.auth.password=secret \
+  --set valkey.password=secret</code></pre>
+      </div>
+
+      <h2 id="external-db">Using an External Database</h2>
+
+      <p>To use an existing PostgreSQL instance (e.g., Amazon RDS) instead of the in-cluster deployment:</p>
+
+      <div class="code-block">
+        <div class="code-title"><span>values.yaml (external PostgreSQL)</span></div>
+        <pre><code>postgresql:
+  enabled: false
+
+externalPostgresql:
+  host: my-rds.example.com
+  port: 5432
+  database: awsdashboard
+  username: awsdashboard
+  password: "secret"</code></pre>
+      </div>
+
+      <div class="callout callout-info">
+        <div class="callout-title">Existing Secrets</div>
+        Instead of plain-text passwords, you can reference a pre-existing Kubernetes secret:<br>
+        <code>externalPostgresql.existingSecret: "my-pg-secret"</code><br>
+        <code>externalPostgresql.existingSecretKey: "password"</code>
+      </div>
+
+      <h2 id="external-valkey">Using External Valkey / Redis</h2>
+
+      <p>To use a managed Redis-compatible service instead of in-cluster Valkey:</p>
+
+      <div class="code-block">
+        <div class="code-title"><span>values.yaml (external Valkey)</span></div>
+        <pre><code>valkey:
+  enabled: false
+
+externalValkey:
+  url: "redis://:password@my-redis.example.com:6379"</code></pre>
+      </div>
+
+      <h2 id="ingress">Ingress Configuration</h2>
+
+      <p>The Helm chart includes an optional Ingress resource that routes <code>/api</code> to the backend and everything else to the frontend.</p>
+
+      <div class="code-block">
+        <div class="code-title"><span>values.yaml (ingress)</span></div>
+        <pre><code>ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: infrawatch.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: infrawatch-tls
+      hosts:
+        - infrawatch.example.com</code></pre>
+      </div>
+
+      <h2 id="upgrade">Upgrading</h2>
+
+      <div class="code-block">
+        <div class="code-title"><span>Terminal</span></div>
+        <pre><code>helm repo update
+helm upgrade infrawatch infrawatch/infrawatch -f values.yaml</code></pre>
+      </div>
+
+      <p>To roll back:</p>
+
+      <div class="code-block">
+        <div class="code-title"><span>Terminal</span></div>
+        <pre><code>helm rollback infrawatch</code></pre>
+      </div>
+
+      <div class="docs-footer-nav">
+        <a href="./docker.html" class="docs-footer-link">
+          <span class="label">Previous</span>
+          <span class="title">← Docker Compose</span>
+        </a>
+        <a href="./configuration.html" class="docs-footer-link next">
+          <span class="label">Next</span>
+          <span class="title">Configuration →</span>
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <script src="../assets/docs.js"></script>
+</body>
+</html>

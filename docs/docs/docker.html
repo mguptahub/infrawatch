@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-theme-mode="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker Compose — InfraWatch Docs</title>
+  <meta name="description" content="Deploy InfraWatch with Docker Compose in 3 steps.">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body>
+
+  <header class="docs-nav"></header>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar"></aside>
+
+    <aside class="docs-toc">
+      <div class="toc-heading">On this page</div>
+      <a href="#prerequisites" class="toc-link">Prerequisites</a>
+      <a href="#env-file" class="toc-link">Create .env file</a>
+      <a href="#compose-file" class="toc-link">Create compose file</a>
+      <a href="#start" class="toc-link">Start services</a>
+      <a href="#verify" class="toc-link">Verify</a>
+    </aside>
+
+    <main class="docs-content">
+      <h1>Deploy with Docker Compose</h1>
+      <p class="subtitle">The quickest way to get InfraWatch running. No repo clone needed — just two files and one command.</p>
+
+      <h2 id="prerequisites">Prerequisites</h2>
+
+      <ul>
+        <li><a href="https://docs.docker.com/get-docker/" target="_blank" rel="noopener">Docker</a> and Docker Compose v2+</li>
+        <li>An AWS IAM role with the required permissions (see <a href="./iam.html">IAM Setup</a>)</li>
+        <li>SMTP credentials for email delivery</li>
+      </ul>
+
+      <h2 id="env-file">Step 1 — Create a <code>.env</code> file</h2>
+
+      <p>Create a new directory for InfraWatch and add a <code>.env</code> file with your configuration:</p>
+
+      <div class="code-block">
+        <div class="code-title">
+          <span>.env</span>
+          <button type="button" class="copy-btn" data-copy="env-code" aria-label="Copy">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/></svg>
+          </button>
+        </div>
+        <pre><code id="env-code"># Admin account email
+ADMIN_EMAIL=admin@company.com
+
+# AWS Power Keys (server-side only, never exposed to users)
+POWER_AWS_ACCESS_KEY_ID=AKIA...
+POWER_AWS_SECRET_ACCESS_KEY=...
+POWER_AWS_REGION=us-east-1
+BASE_ROLE_ARN=arn:aws:iam::123456789012:role/PowerUserRole
+
+# Collector regions (optional — empty = all regions)
+# COLLECTOR_REGIONS=us-east-1,us-east-2,us-west-2
+
+# SMTP (for OTP and notification emails)
+SMTP_HOST=smtp.company.com
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASSWORD=...
+SMTP_FROM=noreply@company.com
+
+# Postgres
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=awsdashboard
+POSTGRES_USER=awsdashboard
+POSTGRES_PASSWORD=&lt;strong-password&gt;
+
+# Valkey
+VALKEY_PASSWORD=&lt;strong-password&gt;
+VALKEY_URL=redis://:${VALKEY_PASSWORD}@valkey:6379
+
+# App
+COOKIE_SECURE=false
+CORS_ORIGINS=http://localhost:4000
+OTP_EXPIRY_MINUTES=10
+OTP_MAX_ATTEMPTS=5
+
+# Auto-registration whitelist (optional)
+# ALLOWED_DOMAINS=company.com,contractor.com</code></pre>
+      </div>
+
+      <div class="callout callout-warn">
+        <div class="callout-title">Important</div>
+        Replace all placeholder values (<code>AKIA...</code>, <code>&lt;strong-password&gt;</code>, etc.) with your actual credentials. Never commit the <code>.env</code> file to version control.
+      </div>
+
+      <p>See the <a href="./configuration.html">Configuration Reference</a> for details on every variable.</p>
+
+      <h2 id="compose-file">Step 2 — Create <code>docker-compose.yml</code></h2>
+
+      <div class="code-block">
+        <div class="code-title">
+          <span>docker-compose.yml</span>
+          <button type="button" class="copy-btn" data-copy="compose-code" aria-label="Copy">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/></svg>
+          </button>
+        </div>
+        <pre><code id="compose-code">services:
+  backend:
+    image: mguptahub/infrawatch-backend:latest
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - valkey
+
+  frontend:
+    image: mguptahub/infrawatch-frontend:latest
+    ports:
+      - "4000:80"
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-awsdashboard}
+      POSTGRES_USER: ${POSTGRES_USER:-awsdashboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--requirepass", "${VALKEY_PASSWORD:?required}"]
+
+volumes:
+  db_data:</code></pre>
+      </div>
+
+      <h2 id="start">Step 3 — Start services</h2>
+
+      <div class="code-block">
+        <div class="code-title">
+          <span>Terminal</span>
+          <button type="button" class="copy-btn" data-copy="start-code" aria-label="Copy">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 1H6C4.9 1 4 1.9 4 3v12h2V3h10V1zm3 4H10C8.9 5 8 5.9 8 7v14c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H10V7h9v14z"/></svg>
+          </button>
+        </div>
+        <pre><code id="start-code">docker compose up -d</code></pre>
+      </div>
+
+      <h2 id="verify">Verify</h2>
+
+      <p>Open <a href="http://localhost:4000" target="_blank" rel="noopener">http://localhost:4000</a> in your browser. Log in with the email set in <code>ADMIN_EMAIL</code> — you'll receive a 6-digit OTP code via email.</p>
+
+      <p>Check that all containers are running:</p>
+
+      <div class="code-block">
+        <div class="code-title"><span>Terminal</span></div>
+        <pre><code>docker compose ps</code></pre>
+      </div>
+
+      <p>You should see <code>backend</code>, <code>frontend</code>, <code>db</code>, and <code>valkey</code> all in a healthy state.</p>
+
+      <div class="callout callout-info">
+        <div class="callout-title">For HTTPS (production)</div>
+        Set <code>COOKIE_SECURE=true</code> and <code>CORS_ORIGINS=https://your-domain.com</code> in your <code>.env</code>. Place a reverse proxy (nginx, Caddy, Traefik) in front of the frontend container.
+      </div>
+
+      <div class="docs-footer-nav">
+        <a href="./" class="docs-footer-link">
+          <span class="label">Previous</span>
+          <span class="title">← Overview</span>
+        </a>
+        <a href="./kubernetes.html" class="docs-footer-link next">
+          <span class="label">Next</span>
+          <span class="title">Kubernetes (Helm) →</span>
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <script src="../assets/docs.js"></script>
+</body>
+</html>
