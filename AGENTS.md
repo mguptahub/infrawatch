@@ -6,11 +6,17 @@
   - `app/routers/`: service endpoints (`ec2.py`, `eks.py`, `iam.py`, etc.).
   - `app/core/`: shared config, AWS session helpers, STS policy mapping, DB/session utilities.
   - `app/db/`: SQLAlchemy models.
+  - Celery worker runs in the same image for background metric/resource collection.
 - `frontend/`: React app (JavaScript/JSX).
   - `src/pages/`: top-level routes/screens.
   - `src/components/`: service panels and shared UI blocks.
   - `src/api/client.js`: all HTTP calls.
-- `.plans/`: planning/design notes (hidden from GitHub Pages).
+- `docs/`: GitHub Pages site (landing page + documentation).
+  - `index.html`: product landing page.
+  - `docs/`: documentation sub-site (5 pages: Overview, Docker, K8s, Configuration, IAM).
+  - `assets/docs.css`: shared docs styles.
+  - `assets/docs.js`: shared docs behaviour (navbar, sidebar, theme toggle, copy buttons). Sidebar nav and active link are injected by JS — add new pages by editing the `links` array in this file.
+- `.plans/`: planning/design notes (not published).
 - Root: `docker-compose.yml`, `.env.example`, `README.md`.
 
 ## Build, Test, and Development Commands
@@ -63,7 +69,21 @@
   - screenshots/GIFs for UI changes,
   - verification steps (commands + flows tested).
 
+## License
+
+- The project is licensed under **AGPLv3** (GNU Affero General Public License v3.0).
+- All contributions must be compatible with AGPLv3.
+
+## Docs Site (GitHub Pages)
+
+- Deployed automatically via GitHub Actions workflow on push to `main`.
+- Landing page: `docs/index.html` — fetches latest release version from GitHub API.
+- Documentation pages: `docs/docs/*.html` — each page is a slim HTML shell; navbar, sidebar, and theme toggle are injected by `docs/assets/docs.js`.
+- To add a new docs page: create the HTML file in `docs/docs/`, add an entry to the `links` array in `docs/assets/docs.js`.
+- Tables must be wrapped in `<div class="table-wrap">` for mobile horizontal scrolling.
+
 ## Security & Configuration Tips
+
 - Never commit `.env`, AWS secrets, or generated credentials.
 - Use `.env.example` as the source of required variables.
 - IAM/STS permissions must be updated in both infrastructure role policy and `backend/app/core/sts_service.py` when adding new service capabilities.
