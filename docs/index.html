@@ -1158,7 +1158,7 @@
       </div>
 
       <div class="nav-buttons">
-        <span class="nav-version">v0.1.0</span>
+        <span class="nav-version" id="release-version"></span>
         <a href="#get-started" class="btn btn-primary">
           Get Started
         </a>
@@ -1784,9 +1784,13 @@ helm repo add infrawatch \
   https://infrawatch.mguptahub.com/helm
 helm repo update
 
+---
+
 # Install with values file
 helm install infrawatch infrawatch/infrawatch \
   -f values.yaml
+
+---
 
 # Or use --set flags directly
 helm install infrawatch infrawatch/infrawatch \
@@ -1901,6 +1905,16 @@ helm install infrawatch infrawatch/infrawatch \
         }
       });
     }
+
+    // Fetch latest release version from GitHub
+    fetch('https://api.github.com/repos/mguptahub/infrawatch/releases/latest')
+      .then(r => r.json())
+      .then(data => {
+        if (data.tag_name) {
+          document.getElementById('release-version').textContent = data.tag_name;
+        }
+      })
+      .catch(() => {});
 
     // Mobile menu toggle
     function toggleMobileMenu() {
