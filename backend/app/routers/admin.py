@@ -217,7 +217,10 @@ async def admin_action(
             )
         except Exception as e:
             logger.error("STS AssumeRole failed: %s", e)
-            raise HTTPException(status_code=500, detail="Failed to issue AWS credentials. Contact your admin.")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to issue AWS credentials: {str(e)}",
+            )
 
         # Revoke any previously active sessions for this user
         now = datetime.utcnow()

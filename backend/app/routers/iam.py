@@ -1,12 +1,20 @@
 import csv
 import io
 import time
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from botocore.exceptions import ClientError
+from sqlalchemy.orm import Session
+
 from ..core.aws import get_current_session, get_session_and_config
 from ..core.valkey_client import get_cached, make_cache_key, CACHE_TTL
+from ..core.sse_refresh import stream_refresh_done
+from ..core.database import get_db
+from ..db.models import CollectedResource
 
 router = APIRouter(prefix="/api/iam", tags=["IAM"])
+USE_COLLECTOR_DB = True
+IAM_REGION = "global"
 
 
 def _to_iso(dt):
@@ -153,8 +161,47 @@ def _fetch_user_detail(session, username: str):
     }
 
 
+def _list_iam_from_db(db: Session):
+    """Return { users, count } from collected_resources (IAM is stored under region global)."""
+    rows = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "iam",
+            CollectedResource.region == IAM_REGION,
+        )
+        .all()
+    )
+    users = []
+    for r in rows:
+        att = r.attributes or {}
+        list_item = att.get("list")
+        if list_item:
+            users.append(list_item)
+    users.sort(key=lambda x: (x.get("username") or "").lower())
+    return {"users": users, "count": len(users)}
+
+
+def _detail_iam_from_db(username: str, db: Session):
+    """Return user detail dict from collected_resources or None."""
+    r = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "iam",
+            CollectedResource.region == IAM_REGION,
+            CollectedResource.resource_id == username,
+        )
+        .first()
+    )
+    if not r:
+        return None
+    att = r.attributes or {}
+    return att.get("detail")
+
+
 @router.get("/users")
-def get_iam_users(request: Request, force: bool = False):
+def get_iam_users(request: Request, force: bool = False, db: Session = Depends(get_db)):
+    if USE_COLLECTOR_DB:
+        return _list_iam_from_db(db)
     session, config = get_session_and_config(request)
     key = make_cache_key("iam-users", config.access_key or "", config.region)
     try:
@@ -163,8 +210,32 @@ def get_iam_users(request: Request, force: bool = False):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/refresh/stream")
+def get_iam_refresh_stream(request: Request):
+    """SSE stream: emits refresh_done when the IAM collector (global) finishes."""
+    _, config = get_session_and_config(request)
+    channel = f"refresh:iam:{IAM_REGION}"
+    return StreamingResponse(
+        stream_refresh_done(channel),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/refresh")
+def post_iam_refresh(request: Request):
+    from app.tasks.collect_tasks import collect_resources
+    collect_resources.delay("iam", IAM_REGION)
+    return {"ok": True, "message": "Refresh started for IAM (global)"}
+
+
 @router.get("/users/{username}")
-def get_iam_user_detail(request: Request, username: str):
+def get_iam_user_detail(request: Request, username: str, db: Session = Depends(get_db)):
+    if USE_COLLECTOR_DB:
+        detail = _detail_iam_from_db(username, db)
+        if not detail:
+            raise HTTPException(status_code=404, detail="User not found")
+        return detail
     session = get_current_session(request)
     try:
         return _fetch_user_detail(session, username)

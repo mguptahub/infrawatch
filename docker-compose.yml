@@ -45,6 +45,42 @@ services:
     networks:
       - monitor-net
 
+  celery_worker:
+    build:
+      context: ./backend
+    container_name: aws-monitor-celery-worker
+    restart: unless-stopped
+    command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+    depends_on:
+      valkey:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    networks:
+      - monitor-net
+
+  celery_beat:
+    build:
+      context: ./backend
+    container_name: aws-monitor-celery-beat
+    restart: unless-stopped
+    command: ["celery", "-A", "app.celery_app", "beat", "--loglevel=info"]
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+    depends_on:
+      valkey:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    networks:
+      - monitor-net
+
   frontend:
     build:
       context: ./frontend

@@ -2,8 +2,8 @@ import uuid
 import enum
 from datetime import datetime
 from sqlalchemy import (
-    Column, String, Integer, Boolean, DateTime,
-    ForeignKey, JSON, Text, Enum as SAEnum,
+    Column, String, Integer, Boolean, DateTime, Float,
+    ForeignKey, JSON, Text, Enum as SAEnum, UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -103,3 +103,62 @@ class AccessSession(Base):
     expires_at = Column(DateTime, nullable=False)
 
     request = relationship("AccessRequest", back_populates="access_sessions")
+
+
+# ─── Collector storage (Phase 1: Celery populates these) ───────────────────────
+
+class CollectedResource(Base):
+    """
+    Latest snapshot of an AWS resource. Celery overwrites on each collect.
+    Keyed by (service_type, region, resource_id).
+    """
+    __tablename__ = "collected_resources"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    service_type = Column(String(32), nullable=False, index=True)   # ec2, eks, databases, elb, etc.
+    region = Column(String(32), nullable=False, index=True)
+    account_id = Column(String(32), nullable=True)
+    resource_id = Column(String(256), nullable=False, index=True)
+    name = Column(String(512), nullable=True)
+    attributes = Column(JSON, nullable=False, default=dict)         # service-specific payload
+    collected_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("service_type", "region", "resource_id", name="uq_collected_resource"),
+    )
+
+
+class CollectedMetric(Base):
+    """
+    Time-series of CloudWatch metrics. Celery inserts; retention (e.g. 72h) applied by task.
+    """
+    __tablename__ = "collected_metrics"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    service_type = Column(String(32), nullable=False, index=True)
+    resource_id = Column(String(256), nullable=False, index=True)
+    region = Column(String(32), nullable=False, index=True)
+    metric_name = Column(String(128), nullable=False, index=True)
+    timestamp = Column(DateTime, nullable=False, index=True)
+    value = Column(Float, nullable=False)
+    unit = Column(String(32), nullable=True)
+
+
+class CostMonthly(Base):
+    """
+    Stored cost per month per account. Past months are immutable; use for summary
+    so we don't re-fetch from AWS on every refresh. Keyed by (account_id, year, month).
+    """
+    __tablename__ = "cost_monthly"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    account_id = Column(String(32), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=False)
+    total = Column(Float, nullable=False)
+    by_service = Column(JSON, nullable=False, default=dict)  # {"Service Name": cost, ...}
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("account_id", "year", "month", name="uq_cost_monthly"),
+    )

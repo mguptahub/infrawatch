@@ -1,10 +1,72 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from botocore.exceptions import ClientError
 from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+
 from ..core.aws import get_session_and_config
 from ..core.valkey_client import get_cached, make_cache_key, CACHE_TTL
+from ..core.sse_refresh import stream_refresh_done
+from ..core.database import get_db
+from ..db.models import CollectedResource
 
 router = APIRouter(prefix="/api/elasticache", tags=["ElastiCache"])
+USE_COLLECTOR_DB = True
+
+
+def _list_elasticache_from_db(region: str, db: Session):
+    """Return { replication_groups, standalone_clusters, total } from collected_resources."""
+    rows = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "elasticache",
+            CollectedResource.region == region,
+        )
+        .all()
+    )
+    replication_groups = []
+    standalone_clusters = []
+    for r in rows:
+        att = r.attributes or {}
+        if att.get("kind") == "replication_group":
+            # Map to list-view shape (primary_endpoint vs endpoint)
+            replication_groups.append({
+                **att,
+                "primary_endpoint": att.get("primary_endpoint"),
+            })
+        else:
+            standalone_clusters.append(att)
+    return {
+        "replication_groups": replication_groups,
+        "standalone_clusters": standalone_clusters,
+        "total": len(replication_groups) + len(standalone_clusters),
+    }
+
+
+def _detail_elasticache_from_db(resource_id: str, is_rg: bool, region: str, db: Session):
+    """Return detail dict from collected_resources or None (minimal shape for side panel)."""
+    r = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "elasticache",
+            CollectedResource.region == region,
+            CollectedResource.resource_id == resource_id,
+        )
+        .first()
+    )
+    if not r:
+        return None
+    att = r.attributes or {}
+    kind = "replication_group" if is_rg else "standalone"
+    if att.get("kind") != kind:
+        return None
+    ep = att.get("primary_endpoint") or att.get("endpoint")
+    port = att.get("port")
+    return {
+        **att,
+        "ConnectionEndpoint": f"{ep}:{port}" if ep and port else (ep or "—"),
+        "SecurityGroupsEnriched": [],
+    }
 
 
 def _fmt_sg_rules(rules):
@@ -144,17 +206,46 @@ def _fetch_elasticache(session):
 
 
 @router.get("/clusters")
-def get_elasticache_clusters(request: Request, force: bool = False):
-    session, config = get_session_and_config(request)
-    key = make_cache_key("elasticache", config.access_key or "", config.region)
+def get_elasticache_clusters(request: Request, force: bool = False, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        return _list_elasticache_from_db(config.region, db)
+    session, config2 = get_session_and_config(request)
+    key = make_cache_key("elasticache", config2.access_key or "", config2.region)
     try:
         return get_cached(key, CACHE_TTL, lambda: _fetch_elasticache(session), force)
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/refresh/stream")
+def get_elasticache_refresh_stream(request: Request):
+    """SSE stream: emits refresh_done when the collector for this region finishes."""
+    _, config = get_session_and_config(request)
+    channel = f"refresh:elasticache:{config.region}"
+    return StreamingResponse(
+        stream_refresh_done(channel),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/refresh")
+def post_elasticache_refresh(request: Request):
+    _, config = get_session_and_config(request)
+    from app.tasks.collect_tasks import collect_resources
+    collect_resources.delay("elasticache", config.region)
+    return {"ok": True, "message": "Refresh started for region " + config.region}
+
+
 @router.get("/detail")
-def get_cluster_detail(request: Request, id: str, is_rg: bool = True):
+def get_cluster_detail(request: Request, id: str, is_rg: bool = True, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        detail = _detail_elasticache_from_db(id, is_rg, config.region, db)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="Resource not found")
+        return detail
     session, _ = get_session_and_config(request)
     ec = session.client("elasticache")
     try:

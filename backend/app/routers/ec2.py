@@ -1,20 +1,155 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from sqlalchemy.orm import Session
+
 from ..core.aws import get_session_and_config
 from ..core.valkey_client import get_cached, make_cache_key, CACHE_TTL
+from ..core.sse_refresh import stream_refresh_done
+from ..core.database import get_db
+from ..db.models import CollectedResource, CollectedMetric
 
 router = APIRouter(prefix="/api/ec2", tags=["EC2"])
+
+# When True, list/detail/metrics read from collected_resources and collected_metrics (Phase 2).
+USE_COLLECTOR_DB = True
 
 
 def _uptime_hours(launch_time):
     if not launch_time:
         return None
     now = datetime.now(timezone.utc)
+    if isinstance(launch_time, str):
+        try:
+            launch_time = datetime.fromisoformat(launch_time.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return None
     if launch_time.tzinfo is None:
         launch_time = launch_time.replace(tzinfo=timezone.utc)
     return round((now - launch_time).total_seconds() / 3600, 1)
+
+
+def _list_ec2_from_db(region: str, db: Session):
+    """Return {instances: [...], count: N} from collected_resources + latest CPU from collected_metrics."""
+    rows = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "ec2",
+            CollectedResource.region == region,
+        )
+        .all()
+    )
+    if not rows:
+        return {"instances": [], "count": 0}
+    resource_ids = [r.resource_id for r in rows]
+    # Latest CPU per resource (one subquery per resource_id would be N+1; do one raw or use distinct on)
+    latest_cpu = {}
+    cutoff = datetime.utcnow() - timedelta(hours=1)
+    for r in rows:
+        m = (
+            db.query(CollectedMetric)
+            .filter(
+                CollectedMetric.service_type == "ec2",
+                CollectedMetric.resource_id == r.resource_id,
+                CollectedMetric.region == region,
+                CollectedMetric.metric_name == "CPUUtilization",
+                CollectedMetric.timestamp >= cutoff,
+            )
+            .order_by(CollectedMetric.timestamp.desc())
+            .first()
+        )
+        if m:
+            latest_cpu[r.resource_id] = round(m.value, 1)
+    instances = []
+    for r in rows:
+        att = r.attributes or {}
+        launch_time = att.get("launch_time")
+        instances.append({
+            "id": r.resource_id,
+            "name": r.name or r.resource_id,
+            "state": att.get("state", "—"),
+            "type": att.get("instance_type", "—"),
+            "az": att.get("availability_zone") or "—",
+            "private_ip": att.get("private_ip"),
+            "public_ip": att.get("public_ip"),
+            "launch_time": launch_time,
+            "uptime_hours": _uptime_hours(launch_time),
+            "cpu_percent": latest_cpu.get(r.resource_id),
+        })
+    return {"instances": instances, "count": len(instances)}
+
+
+def _detail_ec2_from_db(instance_id: str, region: str, db: Session):
+    """Return instance detail from collected_resources or None."""
+    r = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "ec2",
+            CollectedResource.region == region,
+            CollectedResource.resource_id == instance_id,
+        )
+        .first()
+    )
+    if not r:
+        return None
+    att = r.attributes or {}
+    launch_time = att.get("launch_time")
+    return {
+        "id": r.resource_id,
+        "name": r.name or r.resource_id,
+        "state": att.get("state", "—"),
+        "type": att.get("instance_type", "—"),
+        "az": att.get("availability_zone") or "—",
+        "vpc_id": att.get("vpc_id") or "—",
+        "subnet_id": att.get("subnet_id") or "—",
+        "private_ip": att.get("private_ip"),
+        "public_ip": att.get("public_ip"),
+        "launch_time": launch_time,
+        "uptime_hours": _uptime_hours(launch_time),
+        "key_name": att.get("key_name") or "—",
+        "iam_profile": att.get("iam_profile"),
+        "architecture": att.get("architecture", "—"),
+        "ami_id": att.get("ami_id", "—"),
+        "tags": att.get("tags") or [],
+        "security_groups": att.get("security_groups") or [],
+        "volumes": att.get("volumes") or [],
+        "metrics": att.get("metrics") or {},
+    }
+
+
+def _metrics_ec2_from_db(instance_id: str, region: str, hours: int, db: Session):
+    """Return metrics time-series from collected_metrics (same shape as _fetch_ec2_metrics)."""
+    start = datetime.utcnow() - timedelta(hours=hours)
+    rows = (
+        db.query(CollectedMetric)
+        .filter(
+            CollectedMetric.service_type == "ec2",
+            CollectedMetric.resource_id == instance_id,
+            CollectedMetric.region == region,
+            CollectedMetric.metric_name == "CPUUtilization",
+            CollectedMetric.timestamp >= start,
+        )
+        .order_by(CollectedMetric.timestamp.asc())
+        .all()
+    )
+    period_map = {24: 300, 48: 600, 72: 900}
+    period = period_map.get(hours, 300)
+    cpu = [{"ts": m.timestamp.isoformat(), "v": round(m.value, 3)} for m in rows]
+    return {
+        "instance_id": instance_id,
+        "hours": hours,
+        "period_seconds": period,
+        "metrics": {
+            "cpu": cpu,
+            "network_in": [],
+            "network_out": [],
+            "disk_read": [],
+            "disk_write": [],
+            "memory": [],
+        },
+    }
 
 
 def _fmt_sg_rules(rules):
@@ -221,8 +356,14 @@ def _fetch_ec2_detail(session, instance_id):
 
 
 @router.get("/instances")
-def get_ec2_instances(request: Request, force: bool = False):
+def get_ec2_instances(
+    request: Request,
+    force: bool = False,
+    db: Session = Depends(get_db),
+):
     session, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        return _list_ec2_from_db(config.region, db)
     key = make_cache_key("ec2", config.access_key or "", config.region)
     try:
         return get_cached(key, CACHE_TTL, lambda: _fetch_ec2(session), force)
@@ -302,22 +443,61 @@ def _fetch_ec2_metrics(session, instance_id, hours):
 
 
 @router.get("/instances/{instance_id}/metrics")
-def get_ec2_metrics(instance_id: str, request: Request, hours: int = 24):
+def get_ec2_metrics(
+    instance_id: str,
+    request: Request,
+    hours: int = 24,
+    db: Session = Depends(get_db),
+):
     hours = min(max(hours, 1), 72)
-    session, _ = get_session_and_config(request)
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        return _metrics_ec2_from_db(instance_id, config.region, hours, db)
     try:
+        session, _ = get_session_and_config(request)
         return _fetch_ec2_metrics(session, instance_id, hours)
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/instances/{instance_id}")
-def get_ec2_instance_detail(instance_id: str, request: Request):
-    session, _ = get_session_and_config(request)
+def get_ec2_instance_detail(
+    instance_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        detail = _detail_ec2_from_db(instance_id, config.region, db)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="Instance not found")
+        return detail
     try:
+        session, _ = get_session_and_config(request)
         detail = _fetch_ec2_detail(session, instance_id)
         if detail is None:
             raise HTTPException(status_code=404, detail="Instance not found")
         return detail
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/refresh/stream")
+def get_ec2_refresh_stream(request: Request):
+    """SSE stream: emits refresh_done when the collector for this region finishes."""
+    _, config = get_session_and_config(request)
+    channel = f"refresh:ec2:{config.region}"
+    return StreamingResponse(
+        stream_refresh_done(channel),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/refresh")
+def post_ec2_refresh(request: Request):
+    """Enqueue Celery task to refresh EC2 resources for the session's region."""
+    _, config = get_session_and_config(request)
+    from app.tasks.collect_tasks import collect_resources
+    collect_resources.delay("ec2", config.region)
+    return {"ok": True, "message": "Refresh started for region " + config.region}

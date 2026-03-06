@@ -1,11 +1,84 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+
 from ..core.aws import get_session_and_config
 from ..core.valkey_client import get_cached, make_cache_key, CACHE_TTL
+from ..core.sse_refresh import stream_refresh_done
+from ..core.database import get_db
+from ..db.models import CollectedResource
 
 router = APIRouter(prefix="/api/opensearch", tags=["OpenSearch"])
+USE_COLLECTOR_DB = True
+
+
+def _list_opensearch_from_db(region: str, db: Session):
+    """Return { domains: [...], count: N } from collected_resources."""
+    rows = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "opensearch",
+            CollectedResource.region == region,
+        )
+        .all()
+    )
+    domains = [r.attributes or {} for r in rows]
+    return {"domains": domains, "count": len(domains)}
+
+
+def _detail_opensearch_from_db(domain_name: str, region: str, db: Session):
+    """Return detail dict from collected_resources or None."""
+    r = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "opensearch",
+            CollectedResource.region == region,
+            CollectedResource.resource_id == domain_name,
+        )
+        .first()
+    )
+    if not r:
+        return None
+    att = r.attributes or {}
+    ec = {}
+    ec["instance_type"] = att.get("instance_type", "—")
+    ec["instance_count"] = att.get("instance_count", 1)
+    ec["master_enabled"] = att.get("dedicated_master", False)
+    ec["master_type"] = None
+    ec["master_count"] = None
+    ec["zone_awareness"] = att.get("zone_awareness", False)
+    ec["az_count"] = 2 if att.get("zone_awareness") else 1
+    ec["warm_enabled"] = False
+    ec["warm_type"] = None
+    ec["warm_count"] = None
+    ebs = {"enabled": True, "type": att.get("ebs_type", "—"), "size_gb": att.get("ebs_volume_gb"), "iops": None, "throughput": None}
+    return {
+        "name": att.get("name", domain_name),
+        "arn": att.get("arn"),
+        "engine_version": att.get("engine_version", "—"),
+        "status": att.get("status", "—"),
+        "endpoint": att.get("endpoint"),
+        "enforce_https": att.get("enforce_https", False),
+        "tls_policy": "—",
+        "cluster": ec,
+        "ebs": ebs,
+        "in_vpc": att.get("in_vpc", False),
+        "vpc_id": None,
+        "subnets": [],
+        "azs": [],
+        "encryption_at_rest": att.get("encrypted", False),
+        "kms_key": None,
+        "node_to_node_encryption": att.get("node_to_node_enc", False),
+        "fine_grained_access": False,
+        "internal_user_db": False,
+        "security_groups": [],
+        "snapshot_hour": None,
+        "software": {"current_version": None, "update_available": False, "new_version": None, "update_status": None, "optional_deploy": False},
+        "tags": [],
+    }
 
 
 def _fmt_sg_rules(rules):
@@ -131,17 +204,46 @@ def _fetch_opensearch(session):
 
 
 @router.get("/domains")
-def get_opensearch_domains(request: Request, force: bool = False):
-    session, config = get_session_and_config(request)
-    key = make_cache_key("opensearch", config.access_key or "", config.region)
+def get_opensearch_domains(request: Request, force: bool = False, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        return _list_opensearch_from_db(config.region, db)
+    session, config2 = get_session_and_config(request)
+    key = make_cache_key("opensearch", config2.access_key or "", config2.region)
     try:
         return get_cached(key, CACHE_TTL, lambda: _fetch_opensearch(session), force)
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/refresh/stream")
+def get_opensearch_refresh_stream(request: Request):
+    """SSE stream: emits refresh_done when the collector for this region finishes."""
+    _, config = get_session_and_config(request)
+    channel = f"refresh:opensearch:{config.region}"
+    return StreamingResponse(
+        stream_refresh_done(channel),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/refresh")
+def post_opensearch_refresh(request: Request):
+    _, config = get_session_and_config(request)
+    from app.tasks.collect_tasks import collect_resources
+    collect_resources.delay("opensearch", config.region)
+    return {"ok": True, "message": "Refresh started for region " + config.region}
+
+
 @router.get("/detail")
-def get_opensearch_detail(request: Request, name: str):
+def get_opensearch_detail(request: Request, name: str, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        detail = _detail_opensearch_from_db(name, config.region, db)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="Domain not found")
+        return detail
     session, _ = get_session_and_config(request)
     os_client = session.client("opensearch")
     try:

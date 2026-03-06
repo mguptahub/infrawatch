@@ -66,31 +66,90 @@ export const api = {
   getEC2:         (force = false) => req(withForce("/api/ec2/instances", force)),
   getEC2Detail:   (id) => req(`/api/ec2/instances/${id}`),
   getEC2Metrics:  (id, hours = 24) => req(`/api/ec2/instances/${id}/metrics?hours=${hours}`),
+  refreshEC2:     () => req("/api/ec2/refresh", { method: "POST" }),
+  ec2RefreshStreamUrl:   () => `${BASE}/api/ec2/refresh/stream`,
   getEKS:         (force = false) => req(withForce("/api/eks/clusters", force)),
   getEKSDetail:   (name) => req(`/api/eks/clusters/${encodeURIComponent(name)}`),
   getEKSNodes:    (name) => req(`/api/eks/clusters/${encodeURIComponent(name)}/nodes`),
+  refreshEKS:     () => req("/api/eks/refresh", { method: "POST" }),
+  eksRefreshStreamUrl:   () => `${BASE}/api/eks/refresh/stream`,
   getRDS:         (force = false) => req(withForce("/api/rds/instances", force)),
   getRDSDetail:   (id, is_cluster = false) => req(`/api/rds/detail?id=${encodeURIComponent(id)}&is_cluster=${is_cluster}`),
   getRDSMetrics:  (id, is_cluster = false, hours = 24) => req(`/api/rds/metrics?id=${encodeURIComponent(id)}&is_cluster=${is_cluster}&hours=${hours}`),
+  refreshRDS:     () => req("/api/rds/refresh", { method: "POST" }),
+  rdsRefreshStreamUrl: () => `${BASE}/api/rds/refresh/stream`,
+  getDocDB:       (force = false) => req(withForce("/api/docdb/instances", force)),
+  getDocDBDetail: (id, is_cluster = false) => req(`/api/docdb/detail?id=${encodeURIComponent(id)}&is_cluster=${is_cluster}`),
+  getDocDBMetrics:(id, is_cluster = false, hours = 24) => req(`/api/docdb/metrics?id=${encodeURIComponent(id)}&is_cluster=${is_cluster}&hours=${hours}`),
+  refreshDocDB:   () => req("/api/docdb/refresh", { method: "POST" }),
+  docdbRefreshStreamUrl: () => `${BASE}/api/docdb/refresh/stream`,
   getCost:        (force = false) => req(withForce("/api/cost/summary", force)),
   getOpenSearch:       (force = false) => req(withForce("/api/opensearch/domains", force)),
   getOpenSearchDetail: (name) => req(`/api/opensearch/detail?name=${encodeURIComponent(name)}`),
   getOpenSearchMetrics:(name, hours = 24) => req(`/api/opensearch/metrics?name=${encodeURIComponent(name)}&hours=${hours}`),
+  refreshOpenSearch:   () => req("/api/opensearch/refresh", { method: "POST" }),
+  opensearchRefreshStreamUrl: () => `${BASE}/api/opensearch/refresh/stream`,
   getMQ:          (force = false) => req(withForce("/api/mq/brokers", force)),
   getMQDetail:    (id) => req(`/api/mq/brokers/${id}`),
   getMQMetrics:   (id, hours = 24) => req(`/api/mq/brokers/${id}/metrics?hours=${hours}`),
+  refreshMQ:      () => req("/api/mq/refresh", { method: "POST" }),
+  mqRefreshStreamUrl: () => `${BASE}/api/mq/refresh/stream`,
   getElastiCache: (force = false) => req(withForce("/api/elasticache/clusters", force)),
   getECDetail:    (id, is_rg = true) => req(`/api/elasticache/detail?id=${id}&is_rg=${is_rg}`),
   getECMetrics:   (id, engine = "redis", hours = 24, is_rg = true) => req(`/api/elasticache/metrics?id=${id}&engine=${engine}&hours=${hours}&is_rg=${is_rg}`),
+  refreshElastiCache: () => req("/api/elasticache/refresh", { method: "POST" }),
+  elasticacheRefreshStreamUrl: () => `${BASE}/api/elasticache/refresh/stream`,
   getSecrets:      (force = false) => req(withForce("/api/secrets", force)),
   getSecretValue:  (arn) => req(`/api/secrets/value?arn=${encodeURIComponent(arn)}`),
+  refreshSecrets:  () => req("/api/secrets/refresh", { method: "POST" }),
+  secretsRefreshStreamUrl: () => `${BASE}/api/secrets/refresh/stream`,
   getIAMUsers:     (force = false) => req(withForce("/api/iam/users", force)),
   getIAMUserDetail:(username) => req(`/api/iam/users/${encodeURIComponent(username)}`),
+  refreshIAM:      () => req("/api/iam/refresh", { method: "POST" }),
+  iamRefreshStreamUrl: () => `${BASE}/api/iam/refresh/stream`,
   getSES:         (force = false) => req(withForce("/api/ses/overview", force)),
   getSESIdentities: (force = false) => req(withForce("/api/ses/identities", force)),
+  getSESSuppressionSearch: (q, reason) =>
+    req(`/api/ses/suppression/search?${new URLSearchParams({ q: q || "", ...(reason && { reason }) }).toString()}`),
+  /**
+   * Stream removal: POST emails, read NDJSON stream, call onEvent({ email, removed, error? }) for each line.
+   * Returns a promise that resolves when the stream ends; rejects on HTTP error.
+   */
+  async postSESSuppressionRemoveStream(emails, onEvent) {
+    const res = await fetch(`${BASE}/api/ses/suppression/remove/stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ emails }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      if (res.status === 401) window.dispatchEvent(new CustomEvent("session-expired"));
+      throw new Error(err.detail || err.error || "Request failed");
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (value) buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const s = line.trim();
+        if (!s) continue;
+        try {
+          onEvent(JSON.parse(s));
+        } catch (_) { /* skip malformed line */ }
+      }
+      if (done) break;
+    }
+  },
   getLBs:         (force = false) => req(withForce("/api/lb", force)),
   getLBDetail:    (id) => req(`/api/lb/${encodeURIComponent(id)}`),
   getLBMetrics:   (id, hours = 24) => req(`/api/lb/${encodeURIComponent(id)}/metrics?hours=${hours}`),
+  refreshLB:      () => req("/api/lb/refresh", { method: "POST" }),
+  lbRefreshStreamUrl:    () => `${BASE}/api/lb/refresh/stream`,
 
   logout:  () => req("/api/otp/terminate", { method: "POST" }),
   health:  () => req("/api/health"),

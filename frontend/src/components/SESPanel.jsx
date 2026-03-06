@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, Copy, Check, X } from "lucide-react";
 import { api } from "../api/client";
 import { useData } from "../hooks/useData";
+import { SES_BULK_REMOVE_MAX, SES_MIN_SEARCH_CHARS, SES_SUPPRESSION_SEARCH_LIMIT } from "../constants";
 
 function CopyButton({ text, size = 13 }) {
   const [copied, setCopied] = useState(false);
@@ -67,179 +68,6 @@ function RelTime({ iso }) {
     : diff < 86400 ? `${Math.floor(diff / 3600)}h ago`
     : `${Math.floor(diff / 86400)}d ago`;
   return <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }} title={d.toLocaleString()}>{label}</span>;
-}
-
-// ─── Suppression Lookup Tool ──────────────────────────────────────────────────
-function SuppressionLookup() {
-  const [email, setEmail] = useState("");
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [removing, setRemoving] = useState(false);
-  const [removed, setRemoved] = useState(false);
-
-  async function handleLookup(e) {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    setRemoved(false);
-    try {
-      const data = await post("/api/ses/suppression/lookup", { email: email.trim() });
-      setResult(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleRemove() {
-    if (!result?.email) return;
-    setRemoving(true);
-    try {
-      await post("/api/ses/suppression/remove", { emails: [result.email] });
-      setRemoved(true);
-      setResult((r) => ({ ...r, found: false }));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setRemoving(false);
-    }
-  }
-
-  return (
-    <div className="ses-lookup-box">
-      <p className="ses-section-title">🔍 Suppression Lookup &amp; Removal</p>
-      <form onSubmit={handleLookup} className="ses-lookup-form">
-        <input
-          type="email"
-          className="ses-lookup-input"
-          placeholder="user@example.com"
-          value={email}
-          onChange={(e) => { setEmail(e.target.value); setResult(null); setRemoved(false); }}
-        />
-        <button type="submit" className="ses-lookup-btn" disabled={loading || !email.trim()}>
-          {loading ? "Checking…" : "Look Up"}
-        </button>
-      </form>
-
-      {error && <div className="ses-lookup-error">{error}</div>}
-
-      {result && (
-        <div className={`ses-lookup-result ${result.found ? "ses-result-found" : "ses-result-clear"}`}>
-          {result.found ? (
-            <>
-              <div className="ses-result-header">
-                <span className="ses-result-icon">⚠</span>
-                <strong>{result.email}</strong> is on the suppression list
-              </div>
-              <div className="ses-result-meta">
-                <span>Reason: <ReasonBadge reason={result.reason} /></span>
-                <span>Suppressed: <RelTime iso={result.suppressed_at} /></span>
-                {result.feedback_id && <span className="cell-mono" style={{ fontSize: "0.72rem" }}>Feedback ID: {result.feedback_id}</span>}
-              </div>
-              {removed ? (
-                <div className="ses-removed-confirm">✓ Removed from suppression list</div>
-              ) : (
-                <button
-                  className="ses-remove-btn"
-                  onClick={handleRemove}
-                  disabled={removing}
-                >
-                  {removing ? "Removing…" : "Remove from Suppression List"}
-                </button>
-              )}
-            </>
-          ) : (
-            <div className="ses-result-header">
-              <span className="ses-result-icon ses-icon-ok">✓</span>
-              <strong>{result.email}</strong>
-              {removed ? " was successfully removed from the suppression list" : " is NOT on the suppression list"}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Bulk Remove Tool ─────────────────────────────────────────────────────────
-function BulkRemove({ onRemoved }) {
-  const [input, setInput] = useState("");
-  const [results, setResults] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const emails = input
-    .split(/[\n,;]+/)
-    .map((e) => e.trim().toLowerCase())
-    .filter((e) => e.includes("@"));
-
-  async function handleBulkRemove() {
-    if (!emails.length) return;
-    setLoading(true);
-    setError(null);
-    setResults(null);
-    try {
-      const data = await post("/api/ses/suppression/remove", { emails });
-      setResults(data);
-      if (data.removed_count > 0 && onRemoved) onRemoved();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="ses-lookup-box">
-      <p className="ses-section-title">🗑 Bulk Remove from Suppression List</p>
-      <p className="ses-helper-text">Paste emails separated by newlines, commas, or semicolons.</p>
-      <textarea
-        className="ses-bulk-textarea"
-        placeholder={"user1@example.com\nuser2@example.com\nuser3@example.com"}
-        value={input}
-        onChange={(e) => { setInput(e.target.value); setResults(null); }}
-        rows={5}
-      />
-      <div className="ses-bulk-footer">
-        <span className="ses-email-count">
-          {emails.length > 0 ? `${emails.length} email${emails.length !== 1 ? "s" : ""} detected` : "No valid emails yet"}
-        </span>
-        <button
-          className="ses-remove-btn"
-          onClick={handleBulkRemove}
-          disabled={loading || emails.length === 0}
-        >
-          {loading ? "Removing…" : `Remove ${emails.length > 0 ? emails.length : ""} Email${emails.length !== 1 ? "s" : ""}`}
-        </button>
-      </div>
-
-      {error && <div className="ses-lookup-error">{error}</div>}
-
-      {results && (
-        <div className="ses-bulk-results">
-          <div className="ses-bulk-summary">
-            <span style={{ color: "var(--green)" }}>✓ {results.removed_count} removed</span>
-            {results.failed_count > 0 && (
-              <span style={{ color: "var(--red)", marginLeft: "1rem" }}>✗ {results.failed_count} failed</span>
-            )}
-          </div>
-          <div className="ses-bulk-detail">
-            {results.results.map((r) => (
-              <div key={r.email} className={`ses-bulk-row ${r.removed ? "ses-bulk-ok" : "ses-bulk-fail"}`}>
-                <span>{r.removed ? "✓" : "✗"}</span>
-                <span className="cell-mono">{r.email}</span>
-                {r.error && <span className="ses-bulk-err">{r.error}</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ─── Suppression List Browser ─────────────────────────────────────────────────
@@ -435,6 +263,253 @@ function SuppressionBrowser() {
   );
 }
 
+// ─── Suppression Search (partial text, real-time) ─────────────────────────────
+function SuppressionSearch() {
+  const [query, setQuery] = useState("");
+  const [reasonFilter, setReasonFilter] = useState("ALL");
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selected, setSelected] = useState(new Set());
+  const [removing, setRemoving] = useState(false);
+  const [removingEmail, setRemovingEmail] = useState(null); // single-row remove in progress
+  const [removeMsg, setRemoveMsg] = useState(null);
+  const [justRemoved, setJustRemoved] = useState(new Set()); // emails showing "✓ Removed" before row is removed
+
+  async function handleSearch(e) {
+    e.preventDefault();
+    const q = query.trim();
+    if (!q) {
+      setError("Enter partial email or domain to search.");
+      setResults(null);
+      return;
+    }
+    if (q.length < 3) {
+      setError("Enter at least 3 characters to search.");
+      setResults(null);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setResults(null);
+    setSelected(new Set());
+    setJustRemoved(new Set());
+    setRemoveMsg(null);
+    try {
+      const data = await api.getSESSuppressionSearch(
+        q,
+        reasonFilter !== "ALL" ? reasonFilter : undefined
+      );
+      setResults(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function toggleSelect(email) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(email) ? next.delete(email) : next.add(email);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (!results?.entries?.length) return;
+    if (selected.size === results.entries.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(results.entries.map((e) => e.email)));
+    }
+  }
+
+  async function removeSelected() {
+    if (!selected.size) return;
+    const toRemove = [...selected];
+    const batch = toRemove.slice(0, SES_BULK_REMOVE_MAX);
+    setRemoving(true);
+    setRemoveMsg(null);
+    setJustRemoved(new Set());
+    const removedSet = new Set();
+    let processed = 0;
+    try {
+      await api.postSESSuppressionRemoveStream(batch, (data) => {
+        processed += 1;
+        if (data.removed) {
+          removedSet.add(data.email);
+          setJustRemoved((prev) => new Set(prev).add(data.email));
+        }
+        setRemoveMsg(`Removing… ${processed}/${batch.length}`);
+      });
+      setResults((r) => r ? { ...r, entries: r.entries.filter((e) => !removedSet.has(e.email)) } : null);
+      setSelected((prev) => {
+        const n = new Set(prev);
+        removedSet.forEach((e) => n.delete(e));
+        return n;
+      });
+      setJustRemoved(new Set());
+      const remaining = toRemove.length - batch.length;
+      setRemoveMsg(
+        `✓ Removed ${removedSet.size} address${removedSet.size !== 1 ? "es" : ""}` +
+        (remaining > 0 ? `. ${remaining} still selected — click Remove again to remove more.` : "")
+      );
+    } catch (err) {
+      setRemoveMsg(`Error: ${err.message}`);
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  async function removeOne(email) {
+    if (!window.confirm(`Remove ${email} from the suppression list?`)) return;
+    setRemovingEmail(email);
+    setRemoveMsg(null);
+    try {
+      await post("/api/ses/suppression/remove", { emails: [email] });
+      setResults((r) => r ? { ...r, entries: r.entries.filter((e) => e.email !== email) } : null);
+      setSelected((prev) => { const n = new Set(prev); n.delete(email); return n; });
+      setRemoveMsg(`✓ Removed ${email}`);
+    } catch (err) {
+      setRemoveMsg(`Error: ${err.message}`);
+    } finally {
+      setRemovingEmail(null);
+    }
+  }
+
+  return (
+    <div className="ses-browser">
+      <p className="ses-section-title">🔍 Search &amp; Remove</p>
+      <p className="ses-helper-text" style={{ marginBottom: "0.75rem" }}>
+        Search by partial email or full address (min {SES_MIN_SEARCH_CHARS} characters). Remove single addresses with the row button or select multiple and use &quot;Remove selected&quot;. Results limited to {SES_SUPPRESSION_SEARCH_LIMIT}.
+      </p>
+      <form onSubmit={handleSearch} className="ses-browser-controls" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
+        <input
+          type="text"
+          className="ses-search-input"
+          placeholder="Partial email or domain…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ minWidth: 200 }}
+        />
+        <select
+          className="ses-filter-select"
+          value={reasonFilter}
+          onChange={(e) => setReasonFilter(e.target.value)}
+        >
+          <option value="ALL">All reasons</option>
+          <option value="BOUNCE">Bounce only</option>
+          <option value="COMPLAINT">Complaint only</option>
+        </select>
+        <button type="submit" className="ses-lookup-btn" disabled={loading || query.trim().length < SES_MIN_SEARCH_CHARS}>
+          {loading ? "Searching…" : "Search"}
+        </button>
+      </form>
+
+      {error && <div className="ses-lookup-error">{error}</div>}
+      {removeMsg && (
+        <div className={`ses-remove-msg ${removeMsg.startsWith("✓") ? "ses-msg-ok" : "ses-msg-err"}`}>
+          {removeMsg}
+        </div>
+      )}
+
+      {results && (
+        <>
+          <div className="ses-browser-toolbar">
+            <span className="ses-browser-count">
+              {results.entries.length} address{results.entries.length !== 1 ? "es" : ""}
+              {results.truncated && ` (first ${results.limit ?? SES_SUPPRESSION_SEARCH_LIMIT} matches)`}
+            </span>
+            {selected.size > 0 && (
+              <>
+                {selected.size > SES_BULK_REMOVE_MAX && (
+                  <span className="ses-helper-text" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                    Max {SES_BULK_REMOVE_MAX} per click (one API call per address)
+                  </span>
+                )}
+                <button className="ses-remove-btn" onClick={removeSelected} disabled={removing}>
+                  {removing ? "Removing…" : `Remove ${selected.size > SES_BULK_REMOVE_MAX ? SES_BULK_REMOVE_MAX + " of " + selected.size : selected.size} selected`}
+                </button>
+              </>
+            )}
+          </div>
+          {results.entries.length > 0 ? (
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 36 }}>
+                      <input
+                        type="checkbox"
+                        checked={results.entries.length > 0 && selected.size === results.entries.length}
+                        onChange={toggleAll}
+                        style={{ accentColor: "var(--amber)" }}
+                      />
+                    </th>
+                    <th>Email Address</th>
+                    <th>Reason</th>
+                    <th>Suppressed</th>
+                    <th style={{ width: 100, textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.entries.map((e) => (
+                    <tr
+                      key={e.email}
+                      className={justRemoved.has(e.email) ? "ses-row-removed" : ""}
+                      onClick={() => !justRemoved.has(e.email) && toggleSelect(e.email)}
+                      style={{ cursor: justRemoved.has(e.email) ? "default" : "pointer", background: selected.has(e.email) && !justRemoved.has(e.email) ? "rgba(245,166,35,0.07)" : undefined }}
+                    >
+                      <td onClick={(ev) => ev.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(e.email)}
+                          onChange={() => toggleSelect(e.email)}
+                          disabled={justRemoved.has(e.email)}
+                          style={{ accentColor: "var(--amber)" }}
+                        />
+                      </td>
+                      <td className="cell-mono cell-bold">{e.email}</td>
+                      <td><ReasonBadge reason={e.reason} /></td>
+                      <td><RelTime iso={e.suppressed_at} /></td>
+                      <td onClick={(ev) => ev.stopPropagation()} style={{ textAlign: "right" }}>
+                        {justRemoved.has(e.email) ? (
+                          <span className="ses-removed-tick">✓ Removed</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="ses-remove-btn"
+                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                            disabled={removing || removingEmail !== null}
+                            onClick={() => removeOne(e.email)}
+                          >
+                            {removingEmail === e.email ? "Removing…" : "Remove"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="panel-empty">
+              {query.trim() ? `No addresses matching "${query}"` : "Enter partial email and click Search"}
+            </div>
+          )}
+        </>
+      )}
+
+      {!results && !loading && (
+        <div className="panel-empty" style={{ padding: "2rem", color: "var(--text-muted)" }}>
+          Enter partial text (e.g. email or domain) and click Search to find suppressed addresses.
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Panel ───────────────────────────────────────────────────────────────
 export default function SESPanel() {
   const overviewFetcher = useCallback((force = false) => api.getSES(force), []);
@@ -444,9 +519,7 @@ export default function SESPanel() {
 
   const subtabs = [
     { id: "overview",     label: "Overview" },
-    { id: "lookup",       label: "Lookup & Remove" },
-    { id: "bulk",         label: "Bulk Remove" },
-    { id: "browser",      label: "Browse List" },
+    { id: "search",       label: "Search & Remove" },
     { id: "identities",   label: "Identities" },
   ];
 
@@ -523,9 +596,7 @@ export default function SESPanel() {
           )
         )}
 
-        {subTab === "lookup" && <SuppressionLookup />}
-        {subTab === "bulk"   && <BulkRemove />}
-        {subTab === "browser" && <SuppressionBrowser />}
+        {subTab === "search" && <SuppressionSearch />}
         {subTab === "identities" && <IdentitiesTab />}
       </div>
     </section>
@@ -684,73 +755,102 @@ function IdentityDrawer({ identity: id, onClose }) {
   );
 }
 
-// ─── Identities sub-tab ───────────────────────────────────────────────────────
+// ─── Identities sub-tab (cached list; filter by partial text) ───────────────────
 function IdentitiesTab() {
   const fetcher = useCallback((force = false) => api.getSESIdentities(force), []);
   const { data, loading, error } = useData(fetcher);
   const [selected, setSelected] = useState(null);
+  const [filter, setFilter] = useState("");
 
   if (loading) return <div className="panel-loading">Loading identities…</div>;
   if (error) return <div className="panel-error">{error}</div>;
 
-  const identities = data?.identities || [];
+  const allIdentities = data?.identities || [];
+  const filterLower = (filter || "").trim().toLowerCase();
+  const identities = filterLower
+    ? allIdentities.filter((i) =>
+        (i.identity || "").toLowerCase().includes(filterLower) ||
+        (i.type || "").toLowerCase().includes(filterLower) ||
+        (i.status || "").toLowerCase().includes(filterLower))
+    : allIdentities;
 
   return (
     <>
-      <div className="table-wrap">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Identity</th>
-              <th>Type</th>
-              <th>Verification</th>
-              <th>Sending</th>
-              <th>DKIM</th>
-              <th>DKIM Status</th>
-              <th>MAIL FROM</th>
-              <th>Config Set</th>
-            </tr>
-          </thead>
-          <tbody>
-            {identities.map((i) => (
-              <tr key={i.identity} className="row-clickable" onClick={() => setSelected(i)}>
-                <td className="cell-bold cell-mono">{i.identity}</td>
-                <td style={{ fontSize: "0.78rem" }}>{i.type}</td>
-                <td>
-                  <span className={`state-pill ${i.status === "SUCCESS" ? "state-green" : i.status === "PENDING" ? "state-amber" : "state-red"}`}>
-                    {i.status}
-                  </span>
-                </td>
-                <td>
-                  <span className={`state-pill ${i.sending_enabled ? "state-green" : "state-gray"}`}>
-                    {i.sending_enabled ? "On" : "Off"}
-                  </span>
-                </td>
-                <td>
-                  <span className={`state-pill ${i.dkim_enabled ? "state-green" : "state-gray"}`}>
-                    {i.dkim_enabled ? "On" : "Off"}
-                  </span>
-                </td>
-                <td>
-                  <span className={`state-pill ${i.dkim_status === "SUCCESS" ? "state-green" : i.dkim_status === "PENDING" ? "state-amber" : "state-gray"}`}>
-                    {i.dkim_status}
-                  </span>
-                </td>
-                <td>
-                  {i.mail_from_domain ? (
-                    <span className={`state-pill ${i.mail_from_status === "SUCCESS" ? "state-green" : i.mail_from_status === "PENDING" ? "state-amber" : "state-red"}`}>
-                      {i.mail_from_status}
-                    </span>
-                  ) : (
-                    <span className="metric-na">—</span>
-                  )}
-                </td>
-                <td className="cell-mono" style={{ fontSize: "0.75rem" }}>{i.configuration_set || "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="ses-browser-controls" style={{ marginBottom: "0.75rem" }}>
+        <input
+          type="text"
+          className="ses-search-input"
+          placeholder="Filter by partial identity, type, or status…"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          style={{ maxWidth: 320 }}
+        />
+        {filter && (
+          <span className="ses-browser-count" style={{ marginLeft: "0.5rem" }}>
+            {identities.length} of {allIdentities.length}
+          </span>
+        )}
       </div>
+      {identities.length === 0 ? (
+        <div className="panel-empty">
+          {filter ? `No identities matching "${filter}"` : "No identities found"}
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Identity</th>
+                <th>Type</th>
+                <th>Verification</th>
+                <th>Sending</th>
+                <th>DKIM</th>
+                <th>DKIM Status</th>
+                <th>MAIL FROM</th>
+                <th>Config Set</th>
+              </tr>
+            </thead>
+            <tbody>
+              {identities.map((i) => (
+                <tr key={i.identity} className="row-clickable" onClick={() => setSelected(i)}>
+                  <td className="cell-bold cell-mono">{i.identity}</td>
+                  <td style={{ fontSize: "0.78rem" }}>{i.type}</td>
+                  <td>
+                    <span className={`state-pill ${i.status === "SUCCESS" ? "state-green" : i.status === "PENDING" ? "state-amber" : "state-red"}`}>
+                      {i.status}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`state-pill ${i.sending_enabled ? "state-green" : "state-gray"}`}>
+                      {i.sending_enabled ? "On" : "Off"}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`state-pill ${i.dkim_enabled ? "state-green" : "state-gray"}`}>
+                      {i.dkim_enabled ? "On" : "Off"}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`state-pill ${i.dkim_status === "SUCCESS" ? "state-green" : i.dkim_status === "PENDING" ? "state-amber" : "state-gray"}`}>
+                      {i.dkim_status}
+                    </span>
+                  </td>
+                  <td>
+                    {i.mail_from_domain ? (
+                      <span className={`state-pill ${i.mail_from_status === "SUCCESS" ? "state-green" : i.mail_from_status === "PENDING" ? "state-amber" : "state-red"}`}>
+                        {i.mail_from_status}
+                      </span>
+                    ) : (
+                      <span className="metric-na">—</span>
+                    )}
+                  </td>
+                  <td className="cell-mono" style={{ fontSize: "0.75rem" }}>{i.configuration_set || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {selected && (
         <IdentityDrawer identity={selected} onClose={() => setSelected(null)} />

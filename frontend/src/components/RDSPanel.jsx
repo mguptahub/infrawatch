@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { api } from "../api/client";
 import { useData } from "../hooks/useData";
+import { REFRESH_STREAM_TIMEOUT_MS } from "../constants";
 
 const STATUS_COLORS = {
   available:        "state-green",
@@ -49,12 +50,48 @@ function CpuCell({ v }) {
   return <span className="cell-mono" style={{ color }}>{v}%</span>;
 }
 
-export default function RDSPanel() {
+export default function RDSPanel({ title = "Databases" }) {
   const fetcher = useCallback((force = false) => api.getRDS(force), []);
   const { data, loading, error, refresh, refreshing } = useData(fetcher);
   const [selected, setSelected] = useState(null);
   const [clSort, setClSort] = useState({ col: "id", dir: "asc" });
   const [instSort, setInstSort] = useState({ col: "id", dir: "asc" });
+  const [syncing, setSyncing] = useState(false);
+  const [showRefreshed, setShowRefreshed] = useState(false);
+
+  async function handleRefresh() {
+    setSyncing(true);
+    setShowRefreshed(false);
+    const streamUrl = api.rdsRefreshStreamUrl();
+    const es = new EventSource(streamUrl);
+    const timeoutId = setTimeout(() => {
+      es.close();
+      refresh();
+      setSyncing(false);
+    }, REFRESH_STREAM_TIMEOUT_MS);
+    es.addEventListener("refresh_done", () => {
+      clearTimeout(timeoutId);
+      es.close();
+      refresh();
+      setSyncing(false);
+      setShowRefreshed(true);
+      setTimeout(() => setShowRefreshed(false), 1500);
+    });
+    es.onerror = () => {
+      clearTimeout(timeoutId);
+      es.close();
+      refresh();
+      setSyncing(false);
+    };
+    try {
+      await api.refreshRDS();
+    } catch (e) {
+      clearTimeout(timeoutId);
+      es.close();
+      refresh();
+      setSyncing(false);
+    }
+  }
 
   if (loading) return <div className="panel-loading">Loading Databases…</div>;
   if (error)   return <div className="panel-error">Database: {error}</div>;
@@ -78,10 +115,14 @@ export default function RDSPanel() {
   return (
     <section className="panel">
       <div className="panel-header">
-        <h2>Databases <span className="count-badge">{data?.total ?? 0}</span></h2>
+        <h2>{title} <span className="count-badge">{data?.total ?? 0}</span></h2>
         <div className="panel-header-actions">
-          <button className="refresh-btn" onClick={refresh} disabled={refreshing} title="Refresh">
-            <RefreshCw size={13} className={refreshing ? "spinning" : ""} />
+          <button className="refresh-btn" onClick={handleRefresh} disabled={refreshing || syncing} title="Sync from AWS and refresh">
+            {showRefreshed ? (
+              <span className="refresh-done"><Check size={13} /> Refreshed</span>
+            ) : (
+              <RefreshCw size={13} className={refreshing || syncing ? "spinning" : ""} />
+            )}
           </button>
         </div>
       </div>

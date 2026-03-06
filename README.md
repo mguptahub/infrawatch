@@ -77,7 +77,7 @@ The backend assumes `BASE_ROLE_ARN` and applies a restrictive session policy per
 - **ElastiCache**: `elasticache:Describe*`, `elasticache:List*`
 - **OpenSearch**: `es:List*`, `es:Describe*`, `es:ESHttpGet`
 - **Amazon MQ**: `mq:List*`, `mq:Describe*`
-- **SES**: `ses:Get*`, `ses:List*`, `sesv2:Get*`, `sesv2:List*`, `sesv2:DeleteSuppressedDestination`
+- **SES**: `ses:*`, `sesv2:*` (session policy is compact to stay under AssumeRole size limit)
 - **Secrets Manager**: `secretsmanager:ListSecrets`, `secretsmanager:DescribeSecret`, `secretsmanager:GetSecretValue`
 - **IAM**: `iam:ListUsers`, `iam:GetUser`, `iam:GetLoginProfile`, `iam:GenerateCredentialReport`, `iam:GetCredentialReport`, `iam:ListGroupsForUser`, `iam:ListAttachedUserPolicies`, `iam:ListUserPolicies`, `iam:ListMFADevices`, `iam:ListAccessKeys`, `iam:GetAccessKeyLastUsed`
 - **Cost Explorer**: `ce:Get*`, `ce:List*`, `ce:Describe*`

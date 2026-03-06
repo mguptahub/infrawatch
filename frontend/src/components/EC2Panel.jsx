@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, X, ChevronDown, ChevronRight, BarChart2 } from "lucide-react";
+import { RefreshCw, X, ChevronDown, ChevronRight, BarChart2, Check } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from "recharts";
 import { api } from "../api/client";
 import { useData } from "../hooks/useData";
+import { REFRESH_STREAM_TIMEOUT_MS } from "../constants";
 
 const STATE_COLORS = {
   running:         "state-green",
@@ -71,6 +72,42 @@ export default function EC2Panel() {
 
   const fetcher = useCallback((force = false) => api.getEC2(force), []);
   const { data, loading, error, refresh, refreshing } = useData(fetcher);
+  const [syncing, setSyncing] = useState(false);
+  const [showRefreshed, setShowRefreshed] = useState(false);
+
+  async function handleRefresh() {
+    setSyncing(true);
+    setShowRefreshed(false);
+    const streamUrl = api.ec2RefreshStreamUrl();
+    const es = new EventSource(streamUrl);
+    const timeoutId = setTimeout(() => {
+      es.close();
+      refresh();
+      setSyncing(false);
+    }, REFRESH_STREAM_TIMEOUT_MS);
+    es.addEventListener("refresh_done", () => {
+      clearTimeout(timeoutId);
+      es.close();
+      refresh();
+      setSyncing(false);
+      setShowRefreshed(true);
+      setTimeout(() => setShowRefreshed(false), 1500);
+    });
+    es.onerror = () => {
+      clearTimeout(timeoutId);
+      es.close();
+      refresh();
+      setSyncing(false);
+    };
+    try {
+      await api.refreshEC2();
+    } catch (e) {
+      clearTimeout(timeoutId);
+      es.close();
+      refresh();
+      setSyncing(false);
+    }
+  }
 
   const instances = data?.instances || [];
   const filtered = stateFilter === "all"
@@ -116,8 +153,12 @@ export default function EC2Panel() {
             <option value="pending">Pending</option>
             <option value="terminated">Terminated</option>
           </select>
-          <button className="refresh-btn" onClick={refresh} disabled={refreshing} title="Refresh">
-            <RefreshCw size={13} className={refreshing ? "spinning" : ""} />
+          <button className="refresh-btn" onClick={handleRefresh} disabled={refreshing || syncing} title="Sync from AWS and refresh">
+            {showRefreshed ? (
+              <span className="refresh-done"><Check size={13} /> Refreshed</span>
+            ) : (
+              <RefreshCw size={13} className={refreshing || syncing ? "spinning" : ""} />
+            )}
           </button>
         </div>
       </div>

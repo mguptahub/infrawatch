@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import EC2Panel from "../components/EC2Panel";
 import EKSPanel from "../components/EKSPanel";
-import RDSPanel from "../components/RDSPanel";
+import DatabasesPanel from "../components/DatabasesPanel";
 import CostPanel from "../components/CostPanel";
 import OpenSearchPanel from "../components/OpenSearchPanel";
 import MQPanel from "../components/MQPanel";
@@ -173,7 +173,7 @@ export default function DashboardPage() {
       <main key={contentKey} className="dash-content">
         {tab === "ec2"         && <EC2Panel />}
         {tab === "eks"         && <EKSPanel />}
-        {tab === "databases"   && <RDSPanel />}
+        {tab === "databases"   && <DatabasesPanel />}
         {tab === "elasticache" && <ElastiCachePanel />}
         {tab === "opensearch"  && <OpenSearchPanel />}
         {tab === "mq"          && <MQPanel />}

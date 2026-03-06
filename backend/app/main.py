@@ -8,7 +8,7 @@ from .core.session import session_store, SESSION_COOKIE_NAME, SESSION_TIMEOUT_MI
 from .core.database import init_db
 from .core.config import settings
 from .core.limiter import limiter
-from .routers import ec2, eks, rds, cost, opensearch, mq, elasticache, secrets, ses, lb, iam
+from .routers import ec2, eks, rds, docdb, cost, opensearch, mq, elasticache, secrets, ses, lb, iam
 from .routers import otp_auth, requests_router, admin
 
 
@@ -55,6 +55,7 @@ async def session_middleware(request: Request, call_next):
 app.include_router(ec2.router)
 app.include_router(eks.router)
 app.include_router(rds.router)
+app.include_router(docdb.router)
 app.include_router(cost.router)
 app.include_router(opensearch.router)
 app.include_router(mq.router)

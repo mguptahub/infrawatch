@@ -1,11 +1,18 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from sqlalchemy.orm import Session
+
 from ..core.aws import get_session_and_config
 from ..core.valkey_client import get_cached, make_cache_key, CACHE_TTL
+from ..core.sse_refresh import stream_refresh_done
+from ..core.database import get_db
+from ..db.models import CollectedResource
 
 router = APIRouter(prefix="/api/eks", tags=["EKS"])
+USE_COLLECTOR_DB = True
 
 
 def _fmt_sg_rules(rules):
@@ -279,10 +286,115 @@ def _fetch_eks_nodes(session, cluster_name):
     return {"nodes": nodes, "count": len(nodes)}
 
 
+def _list_eks_from_db(region: str, db: Session):
+    rows = (
+        db.query(CollectedResource)
+        .filter(CollectedResource.service_type == "eks", CollectedResource.region == region)
+        .all()
+    )
+    clusters = []
+    for r in rows:
+        att = r.attributes or {}
+        clusters.append({
+            "name": r.name or r.resource_id,
+            "arn": att.get("arn"),
+            "status": att.get("status"),
+            "version": att.get("version"),
+            "platform_version": att.get("platform_version"),
+            "endpoint": att.get("endpoint"),
+            "role_arn": att.get("role_arn"),
+            "created_at": att.get("created_at"),
+            "public_access": att.get("public_access", False),
+            "private_access": att.get("private_access", False),
+            "nodegroup_count": att.get("nodegroup_count", 0),
+            "node_count": att.get("node_count", 0),
+            "nodegroups": att.get("nodegroups", []),
+        })
+    return {"clusters": clusters}
+
+
+def _detail_eks_from_db(name: str, region: str, db: Session):
+    r = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "eks",
+            CollectedResource.region == region,
+            CollectedResource.resource_id == name,
+        )
+        .first()
+    )
+    if not r:
+        return None
+    att = r.attributes or {}
+    return {
+        "name": r.name or r.resource_id,
+        "arn": att.get("arn"),
+        "status": att.get("status"),
+        "version": att.get("version"),
+        "platform_version": att.get("platform_version"),
+        "role_arn": att.get("role_arn"),
+        "created_at": att.get("created_at"),
+        "endpoint": att.get("endpoint"),
+        "public_access": att.get("public_access", False),
+        "private_access": att.get("private_access", False),
+        "public_access_cidrs": att.get("public_access_cidrs", []),
+        "vpc_id": att.get("vpc_id"),
+        "subnet_ids": att.get("subnet_ids", []),
+        "security_groups": att.get("security_groups", []),
+        "enabled_log_types": att.get("enabled_log_types", []),
+        "kms_key": att.get("kms_key"),
+        "oidc_issuer": att.get("oidc_issuer"),
+        "nodegroups": att.get("nodegroups", []),
+        "tags": att.get("tags", []),
+    }
+
+
+def _nodes_eks_from_db(cluster_name: str, region: str, db: Session):
+    """Return {nodes: [...], count: N} from stored cluster attributes; enrich cpu_percent from collected_metrics."""
+    from ..db.models import CollectedMetric
+    r = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "eks",
+            CollectedResource.region == region,
+            CollectedResource.resource_id == cluster_name,
+        )
+        .first()
+    )
+    if not r:
+        return None
+    nodes = list((r.attributes or {}).get("nodes", []))
+    if not nodes:
+        return {"nodes": [], "count": 0}
+    cutoff = datetime.utcnow() - timedelta(hours=1)
+    for node in nodes:
+        instance_id = node.get("id")
+        if not instance_id:
+            continue
+        m = (
+            db.query(CollectedMetric)
+            .filter(
+                CollectedMetric.service_type == "ec2",
+                CollectedMetric.resource_id == instance_id,
+                CollectedMetric.region == region,
+                CollectedMetric.metric_name == "CPUUtilization",
+                CollectedMetric.timestamp >= cutoff,
+            )
+            .order_by(CollectedMetric.timestamp.desc())
+            .first()
+        )
+        if m:
+            node["cpu_percent"] = round(m.value, 1)
+    return {"nodes": nodes, "count": len(nodes)}
+
+
 @router.get("/clusters")
-def get_eks_clusters(request: Request, force: bool = False):
-    session, config = get_session_and_config(request)
-    key = make_cache_key("eks", config.access_key or "", config.region)
+def get_eks_clusters(request: Request, force: bool = False, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        return _list_eks_from_db(config.region, db)
+    session, config2 = get_session_and_config(request)
+    key = make_cache_key("eks", config2.access_key or "", config2.region)
     try:
         return get_cached(key, CACHE_TTL, lambda: _fetch_eks(session), force)
     except ClientError as e:
@@ -290,9 +402,15 @@ def get_eks_clusters(request: Request, force: bool = False):
 
 
 @router.get("/clusters/{name}")
-def get_eks_cluster_detail(name: str, request: Request):
-    session, _ = get_session_and_config(request)
+def get_eks_cluster_detail(name: str, request: Request, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        detail = _detail_eks_from_db(name, config.region, db)
+        if detail is None:
+            raise HTTPException(status_code=404, detail=f"EKS cluster '{name}' not found")
+        return detail
     try:
+        session, _ = get_session_and_config(request)
         return _fetch_eks_detail(session, name)
     except ClientError as e:
         if e.response["Error"]["Code"] == "ResourceNotFoundException":
@@ -300,10 +418,36 @@ def get_eks_cluster_detail(name: str, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/refresh/stream")
+def get_eks_refresh_stream(request: Request):
+    """SSE stream: emits refresh_done when the collector for this region finishes."""
+    _, config = get_session_and_config(request)
+    channel = f"refresh:eks:{config.region}"
+    return StreamingResponse(
+        stream_refresh_done(channel),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/refresh")
+def post_eks_refresh(request: Request):
+    _, config = get_session_and_config(request)
+    from app.tasks.collect_tasks import collect_resources
+    collect_resources.delay("eks", config.region)
+    return {"ok": True, "message": "Refresh started for region " + config.region}
+
+
 @router.get("/clusters/{name}/nodes")
-def get_eks_cluster_nodes(name: str, request: Request):
-    session, _ = get_session_and_config(request)
+def get_eks_cluster_nodes(name: str, request: Request, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        result = _nodes_eks_from_db(name, config.region, db)
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"EKS cluster '{name}' not found")
+        return result
     try:
+        session, _ = get_session_and_config(request)
         return _fetch_eks_nodes(session, cluster_name=name)
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))

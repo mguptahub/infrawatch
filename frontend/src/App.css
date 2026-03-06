@@ -1300,6 +1300,16 @@ body {
   border: 1px solid rgba(240, 77, 95, 0.3);
 }
 
+.ses-row-removed {
+  background: rgba(34, 209, 139, 0.08);
+  transition: background 0.2s ease-out, opacity 0.25s ease-out;
+}
+.ses-removed-tick {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--green);
+}
+
 /* ── Refresh button ────────────────────────────────────────────────────────── */
 .panel-header-actions {
   display: flex;
@@ -1327,8 +1337,18 @@ body {
 }
 
 .refresh-btn:disabled {
-  opacity: 0.4;
   cursor: not-allowed;
+  border-color: var(--border);
+  color: var(--text-muted);
+  /* Don't use opacity: it dims the spinning icon too; use dim border/color instead */
+}
+
+.refresh-btn .refresh-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--green);
 }
 
 @keyframes spin {
@@ -1340,9 +1360,17 @@ body {
   }
 }
 
-.spinning {
+.spinning,
+.refresh-btn .spin {
   animation: spin 0.7s linear infinite;
 }
+
+/* Spinning refresh icon: use amber for visibility on dark background */
+.refresh-btn .spinning,
+.refresh-btn .spin {
+  color: var(--amber);
+}
+
 
 /* ── Login textarea ─────────────────────────────────────────────────────────── */
 .field textarea {

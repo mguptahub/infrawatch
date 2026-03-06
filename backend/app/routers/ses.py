@@ -1,12 +1,23 @@
+import json
 from fastapi import APIRouter, Request, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from botocore.exceptions import ClientError
 from datetime import datetime, timedelta
 from typing import List, Optional
 from ..core.aws import get_session_and_config, get_current_session
+from ..core.config import settings
 from ..core.valkey_client import get_cached, make_cache_key, CACHE_TTL
+from ..core.sts_service import SERVICE_POLICIES
 
 router = APIRouter(prefix="/api/ses", tags=["SES"])
+
+
+@router.get("/debug-policy-actions")
+def ses_debug_policy_actions():
+    """Return SES actions from the session policy (for verifying DeleteSuppressedDestination is present)."""
+    ses_stmt = SERVICE_POLICIES.get("ses", {})
+    return {"ses_actions": ses_stmt.get("Action", [])}
 
 
 def _fetch_ses_overview(session):
@@ -159,6 +170,56 @@ def get_suppression_list(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/suppression/search")
+def suppression_search(
+    request: Request,
+    q: str = "",
+    reason: Optional[str] = None,
+    limit: int | None = None,
+):
+    """
+    Real-time search: list suppressed destinations and filter by partial email match.
+    Paginates through AWS until enough matches or end of list. Not cached.
+    """
+    cap = settings.ses_suppression_search_limit
+    if limit is None:
+        limit = cap
+    limit = min(max(limit, 1), cap)
+    session = get_current_session(request)
+    sesv2 = session.client("sesv2")
+    q_lower = (q or "").strip().lower()
+    matches = []
+    next_token = None
+    try:
+        while len(matches) < limit:
+            kwargs = {"PageSize": 100}
+            if next_token:
+                kwargs["NextToken"] = next_token
+            if reason:
+                kwargs["Reasons"] = [reason]
+            resp = sesv2.list_suppressed_destinations(**kwargs)
+            for d in resp.get("SuppressedDestinationSummaries", []):
+                if not q_lower or q_lower in d["EmailAddress"].lower():
+                    matches.append({
+                        "email": d["EmailAddress"],
+                        "reason": d["Reason"],
+                        "suppressed_at": d["LastUpdateTime"].isoformat(),
+                    })
+                    if len(matches) >= limit:
+                        break
+            next_token = resp.get("NextToken")
+            if not next_token:
+                break
+        matches.sort(key=lambda e: e["email"].lower())
+        return {
+            "entries": matches,
+            "truncated": len(matches) >= limit,
+            "limit": limit,
+        }
+    except ClientError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class LookupRequest(BaseModel):
     email: str
 
@@ -205,3 +266,28 @@ def suppression_remove(request: Request, body: RemoveRequest):
         "failed_count": len(results) - removed_count,
         "results": results,
     }
+
+
+@router.post("/suppression/remove/stream")
+def suppression_remove_stream(request: Request, body: RemoveRequest):
+    """
+    Stream removal: delete one at a time and send each result as NDJSON.
+    Frontend can update UI as each email is removed.
+    """
+    session = get_current_session(request)
+    sesv2 = session.client("sesv2")
+    cap = settings.ses_bulk_remove_max
+    emails = body.emails[:cap]
+
+    def generate():
+        for email in emails:
+            try:
+                sesv2.delete_suppressed_destination(EmailAddress=email)
+                yield json.dumps({"email": email, "removed": True}) + "\n"
+            except ClientError as e:
+                yield json.dumps({"email": email, "removed": False, "error": str(e)}) + "\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="application/x-ndjson",
+    )

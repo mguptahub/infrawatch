@@ -1,11 +1,18 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
+from sqlalchemy.orm import Session
+
 from ..core.aws import get_session_and_config
 from ..core.valkey_client import get_cached, make_cache_key, CACHE_TTL
+from ..core.sse_refresh import stream_refresh_done
+from ..core.database import get_db
+from ..db.models import CollectedResource
 
 router = APIRouter(prefix="/api/lb", tags=["Load Balancers"])
+USE_COLLECTOR_DB = True
 
 
 def _parse_az(azs):
@@ -289,16 +296,96 @@ def _build_classic_detail(elb_classic, lb):
     }
 
 
+# ─── DB-backed list/detail (Phase 2) ───────────────────────────────────────────
+
+def _list_lb_from_db(region: str, db: Session):
+    rows = (
+        db.query(CollectedResource)
+        .filter(CollectedResource.service_type == "elb", CollectedResource.region == region)
+        .all()
+    )
+    load_balancers = []
+    for r in rows:
+        att = r.attributes or {}
+        load_balancers.append({
+            "arn": att.get("arn"),
+            "name": r.name or r.resource_id,
+            "type": att.get("type", "—"),
+            "state": att.get("state", "unknown"),
+            "scheme": att.get("scheme", "—"),
+            "dns": att.get("dns", "—"),
+            "vpc_id": att.get("vpc_id", "—"),
+            "azs": att.get("azs", []),
+            "created_at": att.get("created_at"),
+            "generation": att.get("generation", "v2"),
+        })
+    return {"load_balancers": load_balancers, "count": len(load_balancers)}
+
+
+def _detail_lb_from_db(lb_id: str, region: str, db: Session):
+    r = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "elb",
+            CollectedResource.region == region,
+            CollectedResource.resource_id == lb_id,
+        )
+        .first()
+    )
+    if not r:
+        return None
+    att = r.attributes or {}
+    return {
+        "arn": att.get("arn"),
+        "name": r.name or r.resource_id,
+        "type": att.get("type", "—"),
+        "state": att.get("state", "unknown"),
+        "scheme": att.get("scheme", "—"),
+        "dns": att.get("dns", "—"),
+        "vpc_id": att.get("vpc_id", "—"),
+        "azs": att.get("azs", []),
+        "created_at": att.get("created_at"),
+        "generation": att.get("generation", "v2"),
+        "listeners": att.get("listeners", []),
+        "target_groups": att.get("target_groups", []),
+        "tags": att.get("tags", []),
+        "fetch_errors": {},
+    }
+
+
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
 @router.get("")
-def get_load_balancers(request: Request, force: bool = False):
-    session, config = get_session_and_config(request)
-    key = make_cache_key("lb", config.access_key or "", config.region)
+def get_load_balancers(request: Request, force: bool = False, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        return _list_lb_from_db(config.region, db)
+    session, config2 = get_session_and_config(request)
+    key = make_cache_key("lb", config2.access_key or "", config2.region)
     try:
         return get_cached(key, CACHE_TTL, lambda: _fetch_lbs(session), force)
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/refresh/stream")
+def get_lb_refresh_stream(request: Request):
+    """SSE stream: emits refresh_done when the collector for this region finishes."""
+    _, config = get_session_and_config(request)
+    channel = f"refresh:elb:{config.region}"
+    return StreamingResponse(
+        stream_refresh_done(channel),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/refresh")
+def post_lb_refresh(request: Request):
+    _, config = get_session_and_config(request)
+    from app.tasks.collect_tasks import collect_resources
+    collect_resources.delay("elb", config.region)
+    return {"ok": True, "message": "Refresh started for region " + config.region}
 
 
 def _fetch_lb_metrics(session, lb_id, hours):
@@ -378,9 +465,15 @@ def get_lb_metrics(lb_id: str, request: Request, hours: int = 24):
 
 
 @router.get("/{lb_id:path}")
-def get_lb_detail(lb_id: str, request: Request):
-    session, _ = get_session_and_config(request)
+def get_lb_detail(lb_id: str, request: Request, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        detail = _detail_lb_from_db(lb_id, config.region, db)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="Load balancer not found")
+        return detail
     try:
+        session, _ = get_session_and_config(request)
         detail = _fetch_lb_detail(session, lb_id)
         if detail is None:
             raise HTTPException(status_code=404, detail="Load balancer not found")

@@ -1,11 +1,48 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+
 from ..core.aws import get_session_and_config
 from ..core.valkey_client import get_cached, make_cache_key, CACHE_TTL
+from ..core.sse_refresh import stream_refresh_done
+from ..core.database import get_db
+from ..db.models import CollectedResource
 
 router = APIRouter(prefix="/api/mq", tags=["MQ"])
+USE_COLLECTOR_DB = True
+
+
+def _list_mq_from_db(region: str, db: Session):
+    """Return { brokers: [...], count } from collected_resources."""
+    rows = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "mq",
+            CollectedResource.region == region,
+        )
+        .all()
+    )
+    brokers = [r.attributes or {} for r in rows]
+    return {"brokers": brokers, "count": len(brokers)}
+
+
+def _detail_mq_from_db(broker_id: str, region: str, db: Session):
+    """Return broker detail dict from collected_resources or None."""
+    r = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "mq",
+            CollectedResource.region == region,
+            CollectedResource.resource_id == broker_id,
+        )
+        .first()
+    )
+    if not r:
+        return None
+    return r.attributes or {}
 
 
 def _get_mq_metric_configs(engine_type):
@@ -132,22 +169,50 @@ def _fetch_mq_metrics(session, broker_id, hours=24):
 
 
 @router.get("/brokers")
-def get_mq_brokers(request: Request, force: bool = False):
-    session, config = get_session_and_config(request)
-    key = make_cache_key("mq", config.access_key or "", config.region)
+def get_mq_brokers(request: Request, force: bool = False, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        return _list_mq_from_db(config.region, db)
+    session, config2 = get_session_and_config(request)
+    key = make_cache_key("mq", config2.access_key or "", config2.region)
     try:
         return get_cached(key, CACHE_TTL, lambda: _fetch_mq(session), force)
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/refresh/stream")
+def get_mq_refresh_stream(request: Request):
+    """SSE stream: emits refresh_done when the collector for this region finishes."""
+    _, config = get_session_and_config(request)
+    channel = f"refresh:mq:{config.region}"
+    return StreamingResponse(
+        stream_refresh_done(channel),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/refresh")
+def post_mq_refresh(request: Request):
+    _, config = get_session_and_config(request)
+    from app.tasks.collect_tasks import collect_resources
+    collect_resources.delay("mq", config.region)
+    return {"ok": True, "message": "Refresh started for region " + config.region}
+
+
 @router.get("/brokers/{broker_id}")
-def get_mq_detail(broker_id: str, request: Request):
+def get_mq_detail(broker_id: str, request: Request, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        detail = _detail_mq_from_db(broker_id, config.region, db)
+        if not detail:
+            raise HTTPException(status_code=404, detail="Broker not found")
+        return detail
     session, _ = get_session_and_config(request)
     try:
         mq = session.client("mq")
         detail = mq.describe_broker(BrokerId=broker_id)
-        # Add tags or other info if needed
         return detail
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))

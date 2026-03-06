@@ -1,11 +1,12 @@
 import { useCallback, useState, useEffect, useMemo } from "react";
-import { RefreshCw, X, Info, Layers, BarChart2, ChevronDown, ChevronRight } from "lucide-react";
+import { RefreshCw, X, Info, Layers, BarChart2, ChevronDown, ChevronRight, Check } from "lucide-react";
 import { 
   ResponsiveContainer, LineChart, Line, 
   XAxis, YAxis, CartesianGrid, Tooltip 
 } from "recharts";
 import { api } from "../api/client";
 import { useData } from "../hooks/useData";
+import { REFRESH_STREAM_TIMEOUT_MS } from "../constants";
 
 const BROKER_STATE_COLORS = {
   RUNNING: "state-green",
@@ -51,6 +52,42 @@ export default function MQPanel() {
   const { data, loading, error, refresh, refreshing } = useData(fetcher);
   const [selected, setSelected] = useState(null);
   const [sort, setSort] = useState({ col: "name", dir: "asc" });
+  const [syncing, setSyncing] = useState(false);
+  const [showRefreshed, setShowRefreshed] = useState(false);
+
+  async function handleRefresh() {
+    setSyncing(true);
+    setShowRefreshed(false);
+    const streamUrl = api.mqRefreshStreamUrl();
+    const es = new EventSource(streamUrl);
+    const timeoutId = setTimeout(() => {
+      es.close();
+      refresh();
+      setSyncing(false);
+    }, REFRESH_STREAM_TIMEOUT_MS);
+    es.addEventListener("refresh_done", () => {
+      clearTimeout(timeoutId);
+      es.close();
+      refresh();
+      setSyncing(false);
+      setShowRefreshed(true);
+      setTimeout(() => setShowRefreshed(false), 1500);
+    });
+    es.onerror = () => {
+      clearTimeout(timeoutId);
+      es.close();
+      refresh();
+      setSyncing(false);
+    };
+    try {
+      await api.refreshMQ();
+    } catch (e) {
+      clearTimeout(timeoutId);
+      es.close();
+      refresh();
+      setSyncing(false);
+    }
+  }
 
   if (loading) return <div className="panel-loading">Loading Amazon MQ…</div>;
   if (error) return <div className="panel-error">Amazon MQ: {error}</div>;
@@ -80,8 +117,12 @@ export default function MQPanel() {
       <div className="panel-header">
         <h2>Amazon MQ Brokers <span className="count-badge">{data?.count ?? 0}</span></h2>
         <div className="panel-header-actions">
-          <button className="refresh-btn" onClick={refresh} disabled={refreshing} title="Refresh">
-            <RefreshCw size={13} className={refreshing ? "spinning" : ""} />
+          <button className="refresh-btn" onClick={handleRefresh} disabled={refreshing || syncing} title="Sync from AWS and refresh">
+            {showRefreshed ? (
+              <span className="refresh-done"><Check size={13} /> Refreshed</span>
+            ) : (
+              <RefreshCw size={13} className={refreshing || syncing ? "spinning" : ""} />
+            )}
           </button>
         </div>
       </div>

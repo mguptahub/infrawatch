@@ -1,11 +1,18 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+
 from ..core.aws import get_session_and_config
 from ..core.valkey_client import get_cached, make_cache_key, CACHE_TTL
+from ..core.sse_refresh import stream_refresh_done
+from ..core.database import get_db
+from ..db.models import CollectedResource
 
 router = APIRouter(prefix="/api/rds", tags=["RDS"])
+USE_COLLECTOR_DB = True
 
 
 def _fmt_sg_rules(rules):
@@ -192,18 +199,133 @@ def _fetch_rds(session):
     }
 
 
+def _is_rds_engine(engine):
+    """Exclude DocumentDB; only RDS/Aurora (postgres, mysql, aurora, etc.)."""
+    if not engine:
+        return True
+    e = (engine or "").lower()
+    return "docdb" not in e
+
+
+def _list_rds_from_db(region: str, db: Session):
+    """Return { clusters, instances, total } from collected_resources (RDS/Aurora only, no DocumentDB)."""
+    rows = (
+        db.query(CollectedResource)
+        .filter(CollectedResource.service_type == "rds", CollectedResource.region == region)
+        .all()
+    )
+    clusters = []
+    instances = []
+    for r in rows:
+        att = r.attributes or {}
+        if not _is_rds_engine(att.get("engine")):
+            continue
+        if att.get("type") == "cluster":
+            clusters.append(att)
+        else:
+            instances.append(att)
+    return {"clusters": clusters, "instances": instances, "total": len(clusters) + len(instances)}
+
+
+def _detail_rds_from_db(resource_id: str, is_cluster: bool, region: str, db: Session):
+    """Return detail dict from collected_resources or None (RDS/Aurora only, no DocumentDB)."""
+    r = (
+        db.query(CollectedResource)
+        .filter(
+            CollectedResource.service_type == "rds",
+            CollectedResource.region == region,
+            CollectedResource.resource_id == resource_id,
+        )
+        .first()
+    )
+    if not r:
+        return None
+    att = r.attributes or {}
+    if att.get("type") != ("cluster" if is_cluster else "instance"):
+        return None
+    if not _is_rds_engine(att.get("engine")):
+        return None
+    # Return shape close to live detail (some fields may be missing; frontend can show —)
+    if is_cluster:
+        return {
+            "type": "cluster",
+            "id": att.get("id"),
+            "engine": att.get("engine", "—"),
+            "version": att.get("version", "—"),
+            "status": att.get("status", "—"),
+            "multi_az": att.get("multi_az"),
+            "endpoint": att.get("endpoint"),
+            "reader_endpoint": None,
+            "port": att.get("port"),
+            "storage_gb": 0,
+            "storage_type": att.get("storage_type", "—"),
+            "encrypted": att.get("encrypted", False),
+            "deletion_protection": att.get("deletion_protection", False),
+            "members": att.get("members", []),
+            "security_groups": [],
+            "tags": [],
+        }
+    return {
+        "type": "instance",
+        "id": att.get("id"),
+        "engine": att.get("engine", "—"),
+        "version": att.get("version", "—"),
+        "class": att.get("class", "—"),
+        "status": att.get("status", "—"),
+        "az": att.get("az", "—"),
+        "multi_az": att.get("multi_az", False),
+        "endpoint": att.get("endpoint"),
+        "port": att.get("port"),
+        "storage_gb": att.get("storage_gb", 0),
+        "storage_type": att.get("storage_type", "—"),
+        "encrypted": att.get("encrypted", False),
+        "deletion_protection": att.get("deletion_protection", False),
+        "security_groups": [],
+        "tags": [],
+    }
+
+
 @router.get("/instances")
-def get_rds_instances(request: Request, force: bool = False):
-    session, config = get_session_and_config(request)
-    key = make_cache_key("rds", config.access_key or "", config.region)
+def get_rds_instances(request: Request, force: bool = False, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        return _list_rds_from_db(config.region, db)
+    session, config2 = get_session_and_config(request)
+    key = make_cache_key("rds", config2.access_key or "", config2.region)
     try:
         return get_cached(key, CACHE_TTL, lambda: _fetch_rds(session), force)
     except ClientError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/refresh/stream")
+def get_rds_refresh_stream(request: Request):
+    """SSE stream: emits refresh_done when the collector for this region finishes."""
+    _, config = get_session_and_config(request)
+    channel = f"refresh:rds:{config.region}"
+    return StreamingResponse(
+        stream_refresh_done(channel),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/refresh")
+def post_rds_refresh(request: Request):
+    _, config = get_session_and_config(request)
+    from app.tasks.collect_tasks import collect_resources
+    collect_resources.delay("rds", config.region)
+    return {"ok": True, "message": "Refresh started for region " + config.region}
+
+
 @router.get("/detail")
-def get_rds_detail(request: Request, id: str, is_cluster: bool = False):
+def get_rds_detail(request: Request, id: str, is_cluster: bool = False, db: Session = Depends(get_db)):
+    _, config = get_session_and_config(request)
+    if USE_COLLECTOR_DB:
+        detail = _detail_rds_from_db(id, is_cluster, config.region, db)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="Resource not found")
+        return detail
     session, _ = get_session_and_config(request)
     rds = session.client("rds")
 

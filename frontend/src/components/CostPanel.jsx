@@ -79,7 +79,6 @@ export default function CostPanel() {
   const [serviceSearch, setServiceSearch] = useState("");
   const [svcSort, setSvcSort]   = useState({ col: "m0", dir: "desc" });
   const [showComparison, setShowComparison] = useState(true);
-
   const fetcher = useCallback((force = false) => api.getCost(force), []);
   const { data, loading, error, refresh, refreshing } = useData(fetcher);
 
@@ -154,29 +153,44 @@ export default function CostPanel() {
             className="refresh-btn"
             onClick={() => refresh(true)}
             disabled={refreshing}
-            title="Force refresh"
+            title="Refresh cost data (past months are saved automatically)"
           >
             <RefreshCw size={14} className={refreshing ? "spin" : ""} />
           </button>
         </div>
       </div>
 
-      {/* ── Stat Cards ──────────────────────────────────────────────────────── */}
+      {/* ── Stat Cards: Last month (baseline) → MTD → Projected (vs last month) → Today ── */}
       <div className="cost-stats-row">
+        <StatCard label={prevLabel} value={fmt(data?.prev_month_total)} sub="Last month total" />
         <StatCard
           label="Month-to-Date"
           value={fmt(data?.month_total)}
-          d={data?.mom_delta}
-          sub={`vs ${prevLabel}`}
+          d={data?.prev_month_same_period_label != null ? data?.mom_delta_same_period : undefined}
+          sub={data?.prev_month_same_period_label != null ? `vs ${prevLabel} till date` : undefined}
           highlight
         />
-        <StatCard label={prevLabel}  value={fmt(data?.prev_month_total)} />
         <StatCard
           label="Projected Month-End"
           value={data?.projected != null ? fmt(data.projected) : "—"}
-          sub={data?.projected != null ? "CE forecast" : "insufficient data"}
+          d={data?.projected_delta}
+          sub={
+            data?.projected != null
+              ? `vs ${prevLabel} · ${data?.projected_source === "forecast" ? "CE forecast" : "extrapolated"}`
+              : "No data yet"
+          }
+          highlight={data?.projected != null}
         />
-        <StatCard label="Today" value={fmt(data?.today_cost)} />
+        <StatCard
+          label="Today"
+          value={fmt(data?.today_cost)}
+          d={data?.today_vs_yesterday_delta}
+          sub={
+            data?.yesterday_cost != null
+              ? `Yesterday ${fmt(data.yesterday_cost)}`
+              : "So far today"
+          }
+        />
       </div>
 
       {/* ── 3-Month Comparison Cards ─────────────────────────────────────────── */}

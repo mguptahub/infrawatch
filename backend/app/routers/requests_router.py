@@ -152,7 +152,10 @@ async def submit_request(body: SubmitRequestBody, db: Session = Depends(get_db))
             )
         except Exception as e:
             logger.error("STS AssumeRole failed: %s", e)
-            raise HTTPException(status_code=500, detail="Failed to issue AWS credentials. Contact your admin.")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to issue AWS credentials: {str(e)}",
+            )
 
         _revoke_active_sessions(user.id, access_request.id, db)
 
@@ -382,7 +385,10 @@ async def approve_or_deny(body: ApprovalVerifyBody, db: Session = Depends(get_db
         )
     except Exception as e:
         logger.error("STS AssumeRole failed: %s", e)
-        raise HTTPException(status_code=500, detail="Failed to issue AWS credentials. Contact your admin.")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to issue AWS credentials: {str(e)}",
+        )
 
     # Revoke any previously active sessions for this user
     _revoke_active_sessions(req.user_id, req.id, db)

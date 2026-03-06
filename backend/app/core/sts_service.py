@@ -3,96 +3,29 @@ import boto3
 from .config import settings
 
 # ─── Service → IAM policy statement mapping ───────────────────────────────────
-# Each service maps to the minimum read-only actions needed for the dashboard.
+# Kept compact to stay under AWS AssumeRole packed policy size limit (2048 bytes).
 
 SERVICE_POLICIES = {
-    "ec2": {
-        "Effect": "Allow",
-        "Action": ["ec2:Describe*"],
-        "Resource": "*",
-    },
-    "eks": {
-        "Effect": "Allow",
-        "Action": ["eks:List*", "eks:Describe*"],
-        "Resource": "*",
-    },
+    "ec2": {"Effect": "Allow", "Action": ["ec2:Describe*"], "Resource": "*"},
+    "eks": {"Effect": "Allow", "Action": ["eks:List*", "eks:Describe*"], "Resource": "*"},
     "databases": {
         "Effect": "Allow",
-        "Action": ["rds:Describe*", "rds:List*"],
+        "Action": ["rds:Describe*", "rds:List*", "docdb:Describe*", "docdb:List*"],
         "Resource": "*",
     },
-    "elasticache": {
-        "Effect": "Allow",
-        "Action": ["elasticache:Describe*", "elasticache:List*"],
-        "Resource": "*",
-    },
-    "opensearch": {
-        "Effect": "Allow",
-        "Action": ["es:List*", "es:Describe*", "es:ESHttpGet"],
-        "Resource": "*",
-    },
-    "mq": {
-        "Effect": "Allow",
-        "Action": ["mq:List*", "mq:Describe*"],
-        "Resource": "*",
-    },
-    "ses": {
-        "Effect": "Allow",
-        "Action": [
-            "ses:Get*", "ses:List*",
-            "sesv2:Get*", "sesv2:List*",
-            "sesv2:DeleteSuppressedDestination",
-        ],
-        "Resource": "*",
-    },
-    "secrets": {
-        "Effect": "Allow",
-        "Action": [
-            "secretsmanager:ListSecrets",
-            "secretsmanager:DescribeSecret",
-            "secretsmanager:GetSecretValue",
-        ],
-        "Resource": "*",
-    },
-    "iam": {
-        "Effect": "Allow",
-        "Action": [
-            "iam:ListUsers",
-            "iam:GetUser",
-            "iam:GetLoginProfile",
-            "iam:GenerateCredentialReport",
-            "iam:GetCredentialReport",
-            "iam:ListGroupsForUser",
-            "iam:ListAttachedUserPolicies",
-            "iam:ListUserPolicies",
-            "iam:ListMFADevices",
-            "iam:ListAccessKeys",
-            "iam:GetAccessKeyLastUsed",
-        ],
-        "Resource": "*",
-    },
-    "cost": {
-        "Effect": "Allow",
-        "Action": ["ce:Get*", "ce:List*", "ce:Describe*"],
-        "Resource": "*",
-    },
-    "elb": {
-        "Effect": "Allow",
-        "Action": [
-            "elasticloadbalancing:Describe*",
-        ],
-        "Resource": "*",
-    },
+    "elasticache": {"Effect": "Allow", "Action": ["elasticache:Describe*", "elasticache:List*"], "Resource": "*"},
+    "opensearch": {"Effect": "Allow", "Action": ["es:List*", "es:Describe*", "es:ESHttpGet"], "Resource": "*"},
+    "mq": {"Effect": "Allow", "Action": ["mq:List*", "mq:Describe*"], "Resource": "*"},
+    "ses": {"Effect": "Allow", "Action": ["ses:*", "sesv2:*"], "Resource": "*"},
+    "secrets": {"Effect": "Allow", "Action": ["secretsmanager:Get*", "secretsmanager:List*", "secretsmanager:Describe*"], "Resource": "*"},
+    "iam": {"Effect": "Allow", "Action": ["iam:Get*", "iam:List*", "iam:GenerateCredentialReport"], "Resource": "*"},
+    "cost": {"Effect": "Allow", "Action": ["ce:Get*", "ce:List*", "ce:Describe*"], "Resource": "*"},
+    "elb": {"Effect": "Allow", "Action": ["elasticloadbalancing:Describe*"], "Resource": "*"},
 }
 
 ALL_SERVICES = list(SERVICE_POLICIES.keys())
 
-# Always included — metrics panels call CloudWatch regardless of which service is approved.
-_CLOUDWATCH_STATEMENT = {
-    "Effect": "Allow",
-    "Action": ["cloudwatch:GetMetricData", "cloudwatch:GetMetricStatistics", "cloudwatch:ListMetrics"],
-    "Resource": "*",
-}
+_CLOUDWATCH_STATEMENT = {"Effect": "Allow", "Action": ["cloudwatch:Get*", "cloudwatch:List*"], "Resource": "*"}
 
 
 def assume_role_for_services(services: list, duration_hours: int, session_name: str) -> dict:

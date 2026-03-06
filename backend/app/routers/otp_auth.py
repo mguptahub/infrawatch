@@ -37,7 +37,12 @@ def _is_admin(email: str) -> bool:
 
 @router.get("/regions")
 def list_regions():
-    return [{"value": v, "label": l} for v, l in AWS_REGIONS_LIST]
+    """Return regions for the frontend selector. When COLLECTOR_REGIONS is set, only those regions are returned; otherwise all regions."""
+    region_labels = {v: l for v, l in AWS_REGIONS_LIST}
+    if not settings.collector_regions.strip():
+        return [{"value": v, "label": l} for v, l in AWS_REGIONS_LIST]
+    allowed = settings.collector_regions_list
+    return [{"value": v, "label": region_labels.get(v, v)} for v in allowed]
 
 
 # ─── Request OTP ──────────────────────────────────────────────────────────────

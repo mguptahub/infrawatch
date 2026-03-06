@@ -86,6 +86,18 @@ class Settings(BaseSettings):
     # Leave empty to disable auto-registration entirely
     allowed_domains: str = ""
 
+    # Refresh stream (SSE) — timeout in seconds before sending timeout event to client
+    refresh_stream_timeout_seconds: int = 300
+
+    # SES suppression search & remove — single source of truth for limits (used in router and API response)
+    ses_suppression_search_limit: int = 20
+    ses_bulk_remove_max: int = 20
+    ses_min_search_chars: int = 3
+
+    # Collector — comma-separated regions to collect (EC2, EKS, LB, metrics). Empty = all regions from AWS_REGIONS_LIST.
+    # Limit to regions you use to reduce API calls and avoid opt-in region errors.
+    collector_regions: str = ""
+
     @property
     def database_url(self) -> str:
         return (
@@ -103,6 +115,14 @@ class Settings(BaseSettings):
         domain = parts[1].lower()
         allowed = {d.strip().lower() for d in self.allowed_domains.split(",") if d.strip()}
         return domain in allowed
+
+    @property
+    def collector_regions_list(self) -> list:
+        """Regions the Celery collector runs in. Empty COLLECTOR_REGIONS = all regions."""
+        if not self.collector_regions.strip():
+            return [r[0] for r in AWS_REGIONS_LIST]
+        parts = [p.strip().lower() for p in self.collector_regions.split(",") if p.strip()]
+        return [p for p in parts if p in AWS_REGIONS]
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
