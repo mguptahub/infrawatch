@@ -8,6 +8,7 @@ from .core.session import session_store, SESSION_COOKIE_NAME, SESSION_TIMEOUT_MI
 from .core.database import init_db
 from .core.config import settings
 from .core.limiter import limiter
+from .core.hmac_middleware import HMACMiddleware
 from .routers import ec2, eks, rds, docdb, cost, opensearch, mq, elasticache, secrets, ses, lb, iam, dashboard, alerts
 from .routers import otp_auth, requests_router, admin
 
@@ -31,6 +32,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(HMACMiddleware)
 
 
 @app.middleware("http")

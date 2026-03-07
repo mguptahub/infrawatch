@@ -104,6 +104,10 @@ class Settings(BaseSettings):
     # Limit to regions you use to reduce API calls and avoid opt-in region errors.
     collector_regions: str = ""
 
+    # HMAC handshake — set by the proxy binary. Empty = open mode (no HMAC check).
+    infrawatch_hmac_secret: str = ""
+    hmac_secret_file: str = ""
+
     @property
     def database_url(self) -> str:
         return (
