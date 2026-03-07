@@ -88,16 +88,15 @@ smtp:
   password: "..."
   from: noreply@company.com
 
-# PostgreSQL (in-cluster)
-postgresql:
-  enabled: true
-  auth:
+# Services (in-cluster)
+services:
+  postgresql:
+    enabled: true
+    auth:
+      password: "strong-password"
+  valkey:
+    enabled: true
     password: "strong-password"
-
-# Valkey (in-cluster)
-valkey:
-  enabled: true
-  password: "strong-password"
 
 # Ingress
 ingress:
@@ -141,8 +140,8 @@ ingress:
   --set app.adminEmail=admin@company.com \
   --set smtp.host=smtp.company.com \
   --set smtp.from=noreply@company.com \
-  --set postgresql.auth.password=secret \
-  --set valkey.password=secret</code></pre>
+  --set services.postgresql.auth.password=secret \
+  --set services.valkey.password=secret</code></pre>
       </div>
 
       <h2 id="external-db">Using an External Database</h2>
@@ -151,22 +150,24 @@ ingress:
 
       <div class="code-block">
         <div class="code-title"><span>values.yaml (external PostgreSQL)</span></div>
-        <pre><code>postgresql:
-  enabled: false
+        <pre><code>services:
+  postgresql:
+    enabled: false
 
-externalPostgresql:
-  host: my-rds.example.com
-  port: 5432
-  database: awsdashboard
-  username: awsdashboard
-  password: "secret"</code></pre>
+externalServices:
+  postgresql:
+    host: my-rds.example.com
+    port: 5432
+    database: awsdashboard
+    username: awsdashboard
+    password: "secret"</code></pre>
       </div>
 
       <div class="callout callout-info">
         <div class="callout-title">Existing Secrets</div>
         Instead of plain-text passwords, you can reference a pre-existing Kubernetes secret:<br>
-        <code>externalPostgresql.existingSecret: "my-pg-secret"</code><br>
-        <code>externalPostgresql.existingSecretKey: "password"</code>
+        <code>externalServices.postgresql.existingSecret: "my-pg-secret"</code><br>
+        <code>externalServices.postgresql.existingSecretKey: "password"</code>
       </div>
 
       <h2 id="external-valkey">Using External Valkey / Redis</h2>
@@ -175,11 +176,13 @@ externalPostgresql:
 
       <div class="code-block">
         <div class="code-title"><span>values.yaml (external Valkey)</span></div>
-        <pre><code>valkey:
-  enabled: false
+        <pre><code>services:
+  valkey:
+    enabled: false
 
-externalValkey:
-  url: "redis://:password@my-redis.example.com:6379"</code></pre>
+externalServices:
+  valkey:
+    url: "redis://:password@my-redis.example.com:6379"</code></pre>
       </div>
 
       <h2 id="ingress">Ingress Configuration</h2>

@@ -88,7 +88,7 @@ services:
     container_name: infrawatch-frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3000:8080"
     networks:
       - monitor-net
 

@@ -5,17 +5,32 @@ metadata:
   name: {{ include "infrawatch.fullname" . }}
   labels:
     {{- include "infrawatch.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
   annotations:
+    {{- if .Values.ingress.certManager.enabled }}
+    {{- if eq .Values.ingress.certManager.issuerType "ClusterIssuer" }}
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.certManager.issuerName }}
+    {{- else }}
+    cert-manager.io/issuer: {{ .Values.ingress.certManager.issuerName }}
+    {{- end }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
   {{- end }}
-  {{- if .Values.ingress.tls }}
+  {{- if or .Values.ingress.tls .Values.ingress.certManager.enabled }}
   tls:
+    {{- if .Values.ingress.certManager.enabled }}
+    {{- range .Values.ingress.hosts }}
+    - secretName: {{ .host | replace "." "-" }}-tls
+      hosts:
+        - {{ .host | quote }}
+    {{- end }}
+    {{- else }}
     {{- toYaml .Values.ingress.tls | nindent 4 }}
+    {{- end }}
   {{- end }}
   rules:
     {{- range .Values.ingress.hosts }}
@@ -28,7 +43,7 @@ spec:
               service:
                 name: {{ include "infrawatch.fullname" $ }}-backend
                 port:
-                  number: {{ $.Values.service.backendPort }}
+                  number: 8000
           {{- range .paths }}
           - path: {{ .path }}
             pathType: {{ .pathType }}
@@ -36,7 +51,7 @@ spec:
               service:
                 name: {{ include "infrawatch.fullname" $ }}-frontend
                 port:
-                  number: {{ $.Values.service.frontendPort }}
+                  number: 8080
           {{- end }}
     {{- end }}
 {{- end }}

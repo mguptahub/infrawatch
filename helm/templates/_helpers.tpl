@@ -39,10 +39,10 @@ Service account name
 PostgreSQL host — internal service or external
 */}}
 {{- define "infrawatch.pgHost" -}}
-{{- if .Values.postgresql.enabled }}
+{{- if .Values.services.postgresql.enabled }}
 {{- include "infrawatch.fullname" . }}-postgres
 {{- else }}
-{{- required "externalPostgresql.host is required when postgresql.enabled=false" .Values.externalPostgresql.host }}
+{{- required "externalServices.postgresql.host is required when services.postgresql.enabled=false" .Values.externalServices.postgresql.host }}
 {{- end }}
 {{- end }}
 
@@ -50,34 +50,34 @@ PostgreSQL host — internal service or external
 PostgreSQL port
 */}}
 {{- define "infrawatch.pgPort" -}}
-{{- if .Values.postgresql.enabled }}5432{{- else }}{{ .Values.externalPostgresql.port }}{{- end }}
+{{- if .Values.services.postgresql.enabled }}5432{{- else }}{{ .Values.externalServices.postgresql.port }}{{- end }}
 {{- end }}
 
 {{/*
 PostgreSQL database
 */}}
 {{- define "infrawatch.pgDatabase" -}}
-{{- if .Values.postgresql.enabled }}{{ .Values.postgresql.auth.database }}{{- else }}{{ .Values.externalPostgresql.database }}{{- end }}
+{{- if .Values.services.postgresql.enabled }}{{ .Values.services.postgresql.auth.database }}{{- else }}{{ .Values.externalServices.postgresql.database }}{{- end }}
 {{- end }}
 
 {{/*
 PostgreSQL username
 */}}
 {{- define "infrawatch.pgUser" -}}
-{{- if .Values.postgresql.enabled }}{{ .Values.postgresql.auth.username }}{{- else }}{{ .Values.externalPostgresql.username }}{{- end }}
+{{- if .Values.services.postgresql.enabled }}{{ .Values.services.postgresql.auth.username }}{{- else }}{{ .Values.externalServices.postgresql.username }}{{- end }}
 {{- end }}
 
 {{/*
 Valkey URL — internal service or external
 */}}
 {{- define "infrawatch.valkeyUrl" -}}
-{{- if .Values.valkey.enabled }}
-{{- if .Values.valkey.password }}
-redis://:{{ .Values.valkey.password }}@{{ include "infrawatch.fullname" . }}-valkey:6379
+{{- if .Values.services.valkey.enabled }}
+{{- if .Values.services.valkey.password }}
+redis://:{{ .Values.services.valkey.password }}@{{ include "infrawatch.fullname" . }}-valkey:6379
 {{- else }}
 redis://{{ include "infrawatch.fullname" . }}-valkey:6379
 {{- end }}
 {{- else }}
-{{- required "externalValkey.url is required when valkey.enabled=false" .Values.externalValkey.url }}
+{{- required "externalServices.valkey.url is required when services.valkey.enabled=false" .Values.externalServices.valkey.url }}
 {{- end }}
 {{- end }}

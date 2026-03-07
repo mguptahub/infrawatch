@@ -1,4 +1,4 @@
-{{- if .Values.valkey.enabled }}
+{{- if .Values.services.valkey.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,14 +22,14 @@ spec:
     spec:
       containers:
         - name: valkey
-          image: "{{ .Values.valkey.image.repository }}:{{ .Values.valkey.image.tag }}"
-          {{- if .Values.valkey.password }}
-          command: ["valkey-server", "--requirepass", {{ .Values.valkey.password | quote }}]
+          image: "{{ .Values.services.valkey.image.repository }}:{{ .Values.services.valkey.image.tag }}"
+          {{- if .Values.services.valkey.password }}
+          command: ["valkey-server", "--requirepass", {{ .Values.services.valkey.password | quote }}]
           {{- end }}
           ports:
             - containerPort: 6379
               protocol: TCP
-          {{- if .Values.valkey.persistence.enabled }}
+          {{- if .Values.services.valkey.persistence.enabled }}
           volumeMounts:
             - name: valkey-data
               mountPath: /data
@@ -40,8 +40,8 @@ spec:
             initialDelaySeconds: 3
             periodSeconds: 5
           resources:
-            {{- toYaml .Values.valkey.resources | nindent 12 }}
-      {{- if .Values.valkey.persistence.enabled }}
+            {{- toYaml .Values.services.valkey.resources | nindent 12 }}
+      {{- if .Values.services.valkey.persistence.enabled }}
       volumes:
         - name: valkey-data
           persistentVolumeClaim:
@@ -64,7 +64,7 @@ spec:
   selector:
     {{- include "infrawatch.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: valkey
-{{- if .Values.valkey.persistence.enabled }}
+{{- if .Values.services.valkey.persistence.enabled }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -76,11 +76,11 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  {{- if .Values.valkey.persistence.storageClass }}
-  storageClassName: {{ .Values.valkey.persistence.storageClass | quote }}
+  {{- if .Values.services.valkey.persistence.storageClass }}
+  storageClassName: {{ .Values.services.valkey.persistence.storageClass | quote }}
   {{- end }}
   resources:
     requests:
-      storage: {{ .Values.valkey.persistence.size }}
+      storage: {{ .Values.services.valkey.persistence.size }}
 {{- end }}
 {{- end }}

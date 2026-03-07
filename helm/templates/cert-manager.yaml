@@ -1,0 +1,38 @@
+{{- if and .Values.ingress.enabled .Values.ingress.certManager.enabled (eq .Values.ingress.certManager.issuerType "Issuer") }}
+{{- if eq .Values.ingress.certManager.solverType "dns-cloudflare" }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "infrawatch.fullname" . }}-cloudflare-api-token
+  labels:
+    {{- include "infrawatch.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  api-token: {{ required "ingress.certManager.cloudflare.apiToken is required for dns-cloudflare solver" .Values.ingress.certManager.cloudflare.apiToken | quote }}
+---
+{{- end }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ .Values.ingress.certManager.issuerName }}
+  labels:
+    {{- include "infrawatch.labels" . | nindent 4 }}
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: {{ required "ingress.certManager.email is required when issuerType=Issuer" .Values.ingress.certManager.email | quote }}
+    privateKeySecretRef:
+      name: {{ .Values.ingress.certManager.issuerName }}-account-key
+    solvers:
+      {{- if eq .Values.ingress.certManager.solverType "dns-cloudflare" }}
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: {{ include "infrawatch.fullname" . }}-cloudflare-api-token
+              key: api-token
+      {{- else }}
+      - http01:
+          ingress:
+            ingressClassName: {{ .Values.ingress.className }}
+      {{- end }}
+{{- end }}

@@ -1,4 +1,4 @@
-{{- if .Values.postgresql.enabled }}
+{{- if .Values.services.postgresql.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,30 +22,30 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          image: "{{ .Values.services.postgresql.image.repository }}:{{ .Values.services.postgresql.image.tag }}"
           ports:
             - containerPort: 5432
               protocol: TCP
           env:
             - name: POSTGRES_DB
-              value: {{ .Values.postgresql.auth.database | quote }}
+              value: {{ .Values.services.postgresql.auth.database | quote }}
             - name: POSTGRES_USER
-              value: {{ .Values.postgresql.auth.username | quote }}
+              value: {{ .Values.services.postgresql.auth.username | quote }}
             - name: POSTGRES_PASSWORD
-              value: {{ .Values.postgresql.auth.password | quote }}
-          {{- if .Values.postgresql.persistence.enabled }}
+              value: {{ .Values.services.postgresql.auth.password | quote }}
+          {{- if .Values.services.postgresql.persistence.enabled }}
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
           {{- end }}
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", {{ .Values.postgresql.auth.username | quote }}]
+              command: ["pg_isready", "-U", {{ .Values.services.postgresql.auth.username | quote }}]
             initialDelaySeconds: 5
             periodSeconds: 5
           resources:
-            {{- toYaml .Values.postgresql.resources | nindent 12 }}
-      {{- if .Values.postgresql.persistence.enabled }}
+            {{- toYaml .Values.services.postgresql.resources | nindent 12 }}
+      {{- if .Values.services.postgresql.persistence.enabled }}
       volumes:
         - name: postgres-data
           persistentVolumeClaim:
@@ -68,7 +68,7 @@ spec:
   selector:
     {{- include "infrawatch.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: postgres
-{{- if .Values.postgresql.persistence.enabled }}
+{{- if .Values.services.postgresql.persistence.enabled }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -80,11 +80,11 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  {{- if .Values.postgresql.persistence.storageClass }}
-  storageClassName: {{ .Values.postgresql.persistence.storageClass | quote }}
+  {{- if .Values.services.postgresql.persistence.storageClass }}
+  storageClassName: {{ .Values.services.postgresql.persistence.storageClass | quote }}
   {{- end }}
   resources:
     requests:
-      storage: {{ .Values.postgresql.persistence.size }}
+      storage: {{ .Values.services.postgresql.persistence.size }}
 {{- end }}
 {{- end }}

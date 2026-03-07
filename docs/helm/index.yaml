@@ -2,8 +2,28 @@ apiVersion: v1
 entries:
   infrawatch:
   - apiVersion: v2
+    appVersion: 0.2.0
+    created: "2026-03-07T09:07:44.231401+05:30"
+    description: InfraWatch — AWS infrastructure monitoring & JIT access management
+    digest: 0eefc6ff232046d4dcfa62ea4df8f892d6160ea3cfc924817741020bbffe831b
+    home: https://infrawatch.mguptahub.com
+    keywords:
+    - aws
+    - monitoring
+    - infrastructure
+    - jit-access
+    maintainers:
+    - name: mguptahub
+    name: infrawatch
+    sources:
+    - https://github.com/mguptahub/infrawatch
+    type: application
+    urls:
+    - https://infrawatch.mguptahub.com/helm/infrawatch-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
     appVersion: 0.1.0
-    created: "2026-03-06T20:07:02.821635+05:30"
+    created: "2026-03-07T09:07:44.230662+05:30"
     description: InfraWatch — AWS infrastructure monitoring & JIT access management
     digest: e7234055f8f14cf1ae3a76417b8c7fee14a3cf64d3a17fa4e1b89c1942c6206a
     home: https://infrawatch.mguptahub.com
@@ -21,4 +41,4 @@ entries:
     urls:
     - https://infrawatch.mguptahub.com/helm/infrawatch-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-06T20:07:02.820886+05:30"
+generated: "2026-03-07T09:07:44.229189+05:30"

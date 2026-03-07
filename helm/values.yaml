@@ -1,114 +1,117 @@
 # InfraWatch Helm values
 
-# -- Backend
-backend:
-  image:
-    repository: mguptahub/infrawatch-backend
-    tag: latest
-    pullPolicy: IfNotPresent
-  replicas: 1
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
+# -- Services managed by this chart
+services:
+  # -- Backend
+  backend:
+    image:
+      repository: mguptahub/infrawatch-backend
+      tag: latest
+      pullPolicy: IfNotPresent
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
 
-# -- Frontend
-frontend:
-  image:
-    repository: mguptahub/infrawatch-frontend
-    tag: latest
-    pullPolicy: IfNotPresent
-  replicas: 1
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 128Mi
+  # -- Frontend
+  frontend:
+    image:
+      repository: mguptahub/infrawatch-frontend
+      tag: latest
+      pullPolicy: IfNotPresent
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
 
-# -- Celery worker
-celeryWorker:
-  replicas: 1
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
+  # -- Celery worker
+  celeryWorker:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
 
-# -- Celery beat (single replica always)
-celeryBeat:
-  resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
+  # -- Celery beat (single replica always)
+  celeryBeat:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
 
-# -- PostgreSQL
-# Set postgresql.enabled=false to use an external database
-postgresql:
-  enabled: true
-  image:
-    repository: postgres
-    tag: "16-alpine"
-  auth:
+  # -- PostgreSQL (set enabled=false to use an external database)
+  postgresql:
+    enabled: true
+    image:
+      repository: postgres
+      tag: "16-alpine"
+    auth:
+      database: awsdashboard
+      username: awsdashboard
+      # password is required — set via --set or secrets
+      password: ""
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  # -- Valkey (Redis-compatible cache & session store)
+  valkey:
+    enabled: true
+    image:
+      repository: valkey/valkey
+      tag: "8-alpine"
+    password: ""
+    persistence:
+      enabled: false
+      size: 1Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+# -- External services (used when corresponding service above is disabled)
+externalServices:
+  # -- External PostgreSQL (used when services.postgresql.enabled=false)
+  postgresql:
+    host: ""
+    port: 5432
     database: awsdashboard
     username: awsdashboard
-    # password is required — set via --set or secrets
+    # password — set via --set or existing secret
     password: ""
-  persistence:
-    enabled: true
-    size: 5Gi
-    storageClass: ""
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
+    # Use an existing secret instead of plain password
+    # existingSecret: ""
+    # existingSecretKey: "password"
 
-# -- External PostgreSQL (used when postgresql.enabled=false)
-externalPostgresql:
-  host: ""
-  port: 5432
-  database: awsdashboard
-  username: awsdashboard
-  # password — set via --set or existing secret
-  password: ""
-  # Use an existing secret instead of plain password
-  # existingSecret: ""
-  # existingSecretKey: "password"
-
-# -- Valkey (Redis-compatible cache & session store)
-valkey:
-  enabled: true
-  image:
-    repository: valkey/valkey
-    tag: "8-alpine"
-  password: ""
-  persistence:
-    enabled: false
-    size: 1Gi
-    storageClass: ""
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
-
-# -- External Valkey/Redis (used when valkey.enabled=false)
-externalValkey:
-  url: ""
+  # -- External Valkey/Redis (used when services.valkey.enabled=false)
+  valkey:
+    url: ""
 
 # -- AWS credentials (server-side only, never exposed to users)
 aws:
@@ -125,11 +128,11 @@ smtp:
   port: 587
   user: ""
   password: ""
-  from: ""
+  from: noreply@example.com
 
 # -- Application config
 app:
-  adminEmail: ""
+  adminEmail: admin@example.com
   cookieSecure: true
   corsOrigins: ""
   otpExpiryMinutes: 10
@@ -142,7 +145,7 @@ app:
 # -- Ingress
 ingress:
   enabled: false
-  className: ""
+  className: nginx
   annotations: {}
   hosts:
     - host: infrawatch.example.com
@@ -150,15 +153,28 @@ ingress:
         - path: /
           pathType: Prefix
   tls: []
+  # -- cert-manager: auto-generates TLS certs for ingress hosts
+  # issuerType: ClusterIssuer — uses an existing cluster-wide issuer (issuerName required)
+  # issuerType: Issuer — creates a namespace-scoped Issuer (solverType + config required)
+  certManager:
+    enabled: false
+    issuerType: ClusterIssuer
+    issuerName: letsencrypt-prod
+    # email for Let's Encrypt registration (required when issuerType=Issuer)
+    email: ""
+    # solverType: http | dns-cloudflare
+    solverType: http
+    # Cloudflare config (required when solverType=dns-cloudflare)
+    cloudflare:
+      apiToken: ""
 
 # -- Service
+# type: ClusterIP | NodePort | LoadBalancer
 service:
   type: ClusterIP
-  frontendPort: 80
-  backendPort: 8000
 
 # -- Service account
 serviceAccount:
   create: true
-  name: ""
+  name: infrawatch
   annotations: {}

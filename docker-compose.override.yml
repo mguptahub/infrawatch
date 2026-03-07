@@ -14,12 +14,13 @@ services:
     build:
       context: ./frontend
       target: builder    # Stop at builder stage, don't run nginx
+    user: node
     command: sh -c "npm start"
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public

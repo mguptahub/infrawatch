@@ -6,7 +6,7 @@ metadata:
     {{- include "infrawatch.labels" . | nindent 4 }}
     app.kubernetes.io/component: celery-worker
 spec:
-  replicas: {{ .Values.celeryWorker.replicas }}
+  replicas: {{ .Values.services.celeryWorker.replicas }}
   selector:
     matchLabels:
       {{- include "infrawatch.selectorLabels" . | nindent 6 }}
@@ -20,8 +20,8 @@ spec:
       serviceAccountName: {{ include "infrawatch.serviceAccountName" . }}
       containers:
         - name: celery-worker
-          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
-          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          image: "{{ .Values.services.backend.image.repository }}:{{ .Values.services.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.services.backend.image.pullPolicy }}
           command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
           envFrom:
             - secretRef:
@@ -30,4 +30,4 @@ spec:
             - name: CELERY_BROKER_URL
               value: {{ include "infrawatch.valkeyUrl" . | trim | quote }}
           resources:
-            {{- toYaml .Values.celeryWorker.resources | nindent 12 }}
+            {{- toYaml .Values.services.celeryWorker.resources | nindent 12 }}

@@ -6,7 +6,7 @@ metadata:
     {{- include "infrawatch.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend
 spec:
-  replicas: {{ .Values.frontend.replicas }}
+  replicas: {{ .Values.services.frontend.replicas }}
   selector:
     matchLabels:
       {{- include "infrawatch.selectorLabels" . | nindent 6 }}
@@ -20,16 +20,16 @@ spec:
       serviceAccountName: {{ include "infrawatch.serviceAccountName" . }}
       containers:
         - name: frontend
-          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
-          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          image: "{{ .Values.services.frontend.image.repository }}:{{ .Values.services.frontend.image.tag }}"
+          imagePullPolicy: {{ .Values.services.frontend.image.pullPolicy }}
           ports:
-            - containerPort: 80
+            - containerPort: 8080
               protocol: TCP
           readinessProbe:
             httpGet:
               path: /
-              port: 80
+              port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
           resources:
-            {{- toYaml .Values.frontend.resources | nindent 12 }}
+            {{- toYaml .Values.services.frontend.resources | nindent 12 }}
