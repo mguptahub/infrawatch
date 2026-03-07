@@ -19,7 +19,7 @@ entries:
     - https://github.com/mguptahub/infrawatch
     type: application
     urls:
-    - https://infrawatch.mguptahub.com/helm/infrawatch-0.2.0.tgz
+    - https://infrawatchhelm.mguptahub.com/helm/infrawatch-0.2.0.tgz
     version: 0.2.0
   - apiVersion: v2
     appVersion: 0.1.0
@@ -39,6 +39,6 @@ entries:
     - https://github.com/mguptahub/infrawatch
     type: application
     urls:
-    - https://infrawatch.mguptahub.com/helm/infrawatch-0.1.0.tgz
+    - https://infrawatchhelm.mguptahub.com/helm/infrawatch-0.1.0.tgz
     version: 0.1.0
 generated: "2026-03-07T09:07:44.229189+05:30"

@@ -160,7 +160,7 @@ The app starts at `http://localhost:4000`. The admin account uses the email set 
 Add the InfraWatch Helm repo:
 
 ```bash
-helm repo add infrawatch https://infrawatch.mguptahub.com/helm
+helm repo add infrawatch https://infrawatchhelm.mguptahub.com/helm
 helm repo update
 ```
 
